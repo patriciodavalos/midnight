@@ -72,6 +72,24 @@
     .gallery-button:hover{
       box-shadow: 5px 5px 10px rgba(255, 255, 255, 0.9);
      }
+
+     .quote-button{
+        background-color: #5a5aeb;
+       color: white;
+       border:none;
+      height: 30px;
+      width: 100px;
+     border-radius: 2px;
+     font-weight: bold;
+     font-size: 15px;
+     cursor: pointer;
+     margin-left: 8px;
+     
+    }
+
+    .quote-button:hover{
+      box-shadow: 5px 5px 10px rgba(255, 255, 255, 0.9);
+     }
     </style>
 
 <script>
@@ -112,6 +130,11 @@
        Gallery
      </button>
 
+     <button class="quote-button"> 
+      Get a Quote
+    </button>
+
+
 
 
 
@@ -119,9 +142,22 @@
 
 
       <body>
-           <h2 class="center large-font">Midnight Digital Manufacturing</h2>
-           <p class="center">Welcome to Midnight Digital Manufacturing, where we provide high-quality 3D printing and manufacturing services. Our team of experts can turn your ideas into reality, quickly and affordably.</p>
            
+           <h2 class="center large-font">Welcome to Midnight Digital Manufacturing </h2>
+        
+           
+           <p class="center">Where we provide high-quality 3D printing and manufacturing services. </p>
+           
+
+           <div style="text-align: center;"></div>
+           <div class="center";></div>
+           <img src="3dprint.gif" alt="3D printing machine" style="display: block; margin: auto;" width= "400" height= "300" >
+           </div>
+           <p class="center"> Our team of experts can turn your ideas into reality, quickly and affordably.</p>
+
+
+           <h2 class="center">Instant Quote</h2>
+           <p class="center">To get an instant quote for your 3D printing or manufacturing project, simply upload your 3D model using the form below:</p>
            <form>
            <div class="center" class="box"> <div> 
            <p> Upload your 3D file </p> 
@@ -129,6 +165,8 @@
            </form>
          
            <model-viewer class="center" id="viewer" camera-controls auto-rotate></model-viewer>
+
+
 
            <script>
            const input = document.getElementById("3d-model");
@@ -179,13 +217,8 @@ reader.readAsArrayBuffer(file);
        </body>
 
            <main>
-          <h2 class="center">Instant Quote</h2>
-       <p class="center">To get an instant quote for your 3D printing or manufacturing project, simply upload your 3D model using the form below:</p>
-      
-       <div style="text-align: center;"></div>
-       <div class="center";></div>
-       <img src="3dprint.gif" alt="3D printing machine" style="display: block; margin: auto;" width= "400" height= "300" >
-       </div>
+         
+  
        <h2 class="center">About</h2>
        <p class="center">Midnight Digital Manufacturing is a leading provider of 3D printing and manufacturing services. Our team of experts has years of experience in the industry and is dedicated to helping our clients turn their ideas into reality.</textcolor>
        <h2 class="center">Contact</h2>
