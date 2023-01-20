@@ -5,9 +5,6 @@
      <meta http-equiv="X-UA-Compatible" content="IE=edge">
      <meta name="viewport" content="width=device-width, initial-scale=1.0">
      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
-     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r121/examples/js/loaders/OBJLoader.js"></script>
-     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r121/examples/js/loaders/STLLoader.js"></script>
-     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r121/examples/js/controls/OrbitControls.js"></script>
      <script type="module"src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
 
      <title>Midnight ~ Digital Manufacture</title>
@@ -74,23 +71,66 @@
      }
 
      .quote-button{
+      
         background-color: #5a5aeb;
        color: white;
        border:none;
-      height: 30px;
-      width: 100px;
-     border-radius: 2px;
-     font-weight: bold;
-     font-size: 15px;
-     cursor: pointer;
-     margin-left: 8px;
+       height: 30px;
+       width: 100px;
+       border-radius: 2px;
+       font-weight: bold;
+       font-size: 15px;
+       cursor: pointer;
+       margin-left: 1200px;
+       margin-top: 10px;
+       
      
     }
 
     .quote-button:hover{
       box-shadow: 5px 5px 10px rgba(255, 255, 255, 0.9);
+      
      }
     </style>
+
+
+<style>
+  .midnight-title {
+   text-align: center;
+    font-weight: bold;
+    font-size: 18px;
+    width: 200px;
+    line-height: 24px;
+    
+   
+    
+  }
+  .midnight-stats{
+
+    font-size: 14px;
+    line-height: 20px;
+  
+  }
+
+  .span-phone{
+    color: aliceblue;
+    cursor: pointer;
+
+  }
+  .span-phone:hover{
+    text-decoration: underline;
+  }
+
+  .span-email {
+    color: aliceblue;
+    cursor: pointer;
+  }
+  .span-email:hover{
+    text-decoration: underline;
+  }
+  
+  </style>
+
 
 <script>
   function changeColor() {
@@ -111,7 +151,7 @@
   body {font-family: Arial, sans-serif; background-color: #FF6633;}
   h1 {color: rgba(13, 13, 83, 0.808);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex;}
   h2 {color: rgb(247, 245, 242);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex;}
-  p {color: rgb(82, 71, 243);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex;}
+  p {color: rgb(82, 71, 243);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex; font-family: arial;margin-top: 0px;}
   h3 {color: rgb(247, 245, 242)}
   model-viewer { width:800px; height:600px; margin:0, auto}      
 </style>
@@ -142,16 +182,20 @@
 
 
       <body>
-           
-           <h2 class="center large-font">Welcome to Midnight Digital Manufacturing </h2>
-        
+
+
+          
+          <h2 class="center">
+            Welcome to Midnight Digital Manufacturing
+          </h2>
+          
            
            <p class="center">Where we provide high-quality 3D printing and manufacturing services. </p>
            
 
            <div style="text-align: center;"></div>
            <div class="center";></div>
-           <img src="3dprint.gif" alt="3D printing machine" style="display: block; margin: auto;" width= "400" height= "300" >
+           <img class="center" src="3dprint.gif" alt="3D printing machine" style="display: block; margin: auto;" width= "400" height= "300" >
            </div>
            <p class="center"> Our team of experts can turn your ideas into reality, quickly and affordably.</p>
 
@@ -166,54 +210,54 @@
          
            <model-viewer class="center" id="viewer" camera-controls auto-rotate></model-viewer>
 
-
-
            <script>
-           const input = document.getElementById("3d-model");
-           const viewer = document.getElementById("viewer");
+            const input = document.getElementById("3d-model");
+            const viewer = document.getElementById("viewer");
+ 
+            input.onchange = function() {const file = input.files[0];viewer.src = URL.createObjectURL(file);};
+ 
+            var currentTime = new Date();
+         
+ 
+            if (currentTime.getHours() >= 6 && currentTime.getHours() < 18) {document.body.style.backgroundColor = "#FF6633";} 
+            else {document.body.style.backgroundColor = "#000033";}
+ 
+            viewer.setModel(geometry);
+            viewer.setModel(object);
+ 
+ 
+ 
+            var stlLoader = new THREE.STLLoader();
+            var objLoader = new THREE.OBJLoader();
+            input.onchange = function() {
+             const file = input.files[0];
+             const fileExtension = file.name.split(".")[1];
+             if (fileExtension === "stl") {
+             stlLoader.load(file, function(geometry) {
+             viewer.src = geometry;
+              });
+             } else if (fileExtension === "obj") {
+              objLoader.load(file, function(object) {
+             viewer.src = object;
+              });
+              } else {
+               viewer.src = URL.createObjectURL(file);
+               }
+                };
+ 
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                 // pass the result to the loader
+                 stlLoader.load(event.target.result, function(geometry) {
+                     viewer.setModel(geometry);
+                 });
+ }
+ reader.readAsArrayBuffer(file);
+ 
+ 
+            </script>
 
-           input.onchange = function() {const file = input.files[0];viewer.src = URL.createObjectURL(file);};
 
-           var currentTime = new Date();
-        
-
-           if (currentTime.getHours() >= 6 && currentTime.getHours() < 18) {document.body.style.backgroundColor = "#FF6633";} 
-           else {document.body.style.backgroundColor = "#000033";}
-
-           viewer.setModel(geometry);
-           viewer.setModel(object);
-
-
-
-           var stlLoader = new THREE.STLLoader();
-           var objLoader = new THREE.OBJLoader();
-           input.onchange = function() {
-            const file = input.files[0];
-            const fileExtension = file.name.split(".")[1];
-            if (fileExtension === "stl") {
-            stlLoader.load(file, function(geometry) {
-            viewer.src = geometry;
-             });
-            } else if (fileExtension === "obj") {
-             objLoader.load(file, function(object) {
-            viewer.src = object;
-             });
-             } else {
-              viewer.src = URL.createObjectURL(file);
-              }
-               };
-
-               const reader = new FileReader();
-               reader.onload = function(event) {
-                // pass the result to the loader
-                stlLoader.load(event.target.result, function(geometry) {
-                    viewer.setModel(geometry);
-                });
-}
-reader.readAsArrayBuffer(file);
-
-
-           </script>
        </body>
 
            <main>
@@ -222,7 +266,7 @@ reader.readAsArrayBuffer(file);
        <h2 class="center">About</h2>
        <p class="center">Midnight Digital Manufacturing is a leading provider of 3D printing and manufacturing services. Our team of experts has years of experience in the industry and is dedicated to helping our clients turn their ideas into reality.</textcolor>
        <h2 class="center">Contact</h2>
-       <p class="center">To get in touch with us, please send an email to info@midnightdm.com or give us a call at 1-800-555-1212.</p>
+       <p class="center">To get in touch with us, please send an email to <span class="span-email"> midnight.digitalm@gmail.com</span> or give us a call at <span class="span-phone">+528112080205</span>.</p>
        <div style="text-align: center;">
        <img src="cofee_cuo-removebg-preview.png" alt="Coffee cup 3D printed in stainless steel" width="400" height="300">
        <img src="switch_contorl-removebg-preview.png" alt="3D printed Nintendo Switch controller" width="400" height="300">
