@@ -6,6 +6,7 @@
      <meta name="viewport" content="width=device-width, initial-scale=1.0">
      <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
      <script type="module"src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+     
 
      <title>Midnight ~ Digital Manufacture</title>
       <img src="iconOrange-white-removebg-preview.png" class="center" alt="Logo" style="float:right; width:100px; height:100px;">
@@ -98,8 +99,8 @@
   .midnight-title {
    text-align: center;
     font-weight: bold;
-    font-size: 18px;
-    width: 200px;
+    font-size: 50px;
+    width: 500px;
     line-height: 24px;
     
    
@@ -205,56 +206,20 @@
            <form>
            <div class="center" class="box"> <div> 
            <p> Upload your 3D file </p> 
-           <input class="center" type="file" id="3d-model" accept=".glb,.gltf,.stl,.obj">
+          
            </form>
+           <iframe src="https://app.digifabster.com/patricio/widget/upload/?mode=iframe" frameborder="0" width="85%" height="1000"><p>Your browser may not support iframes.</p></iframe>
+           <script> var __digifabsterCompanyWidgetUrl = 'https://app.digifabster.com/patricio/widget/upload/?mode=iframe', __digifabsterBtnType = 'float', __digifabsterWidgetLangCode = 'en', __digifabsterSiteUrl = 'https://digifabster.com'; (function() { var d = document, s = d.createElement("script"); s.type = "text/javascript"; s.charset = "UTF-8"; s.async = true; s.src = "https://digifabster.com/static/js/widget.js"; d.body.appendChild(s); })(); </script>
          
-           <model-viewer class="center" id="viewer" camera-controls auto-rotate></model-viewer>
-
+    
            <script>
-            const input = document.getElementById("3d-model");
-            const viewer = document.getElementById("viewer");
- 
-            input.onchange = function() {const file = input.files[0];viewer.src = URL.createObjectURL(file);};
- 
+
             var currentTime = new Date();
-         
- 
+        
             if (currentTime.getHours() >= 6 && currentTime.getHours() < 18) {document.body.style.backgroundColor = "#FF6633";} 
             else {document.body.style.backgroundColor = "#000033";}
  
-            viewer.setModel(geometry);
-            viewer.setModel(object);
- 
- 
- 
-            var stlLoader = new THREE.STLLoader();
-            var objLoader = new THREE.OBJLoader();
-            input.onchange = function() {
-             const file = input.files[0];
-             const fileExtension = file.name.split(".")[1];
-             if (fileExtension === "stl") {
-             stlLoader.load(file, function(geometry) {
-             viewer.src = geometry;
-              });
-             } else if (fileExtension === "obj") {
-              objLoader.load(file, function(object) {
-             viewer.src = object;
-              });
-              } else {
-               viewer.src = URL.createObjectURL(file);
-               }
-                };
- 
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                 // pass the result to the loader
-                 stlLoader.load(event.target.result, function(geometry) {
-                     viewer.setModel(geometry);
-                 });
- }
- reader.readAsArrayBuffer(file);
- 
- 
+          
             </script>
 
 
