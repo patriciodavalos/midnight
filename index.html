@@ -1,12 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
      <head>
-     <meta charset="utf-8">
-     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
-     <script type="module"src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
-     
 
      <title>Midnight ~ Digital Manufacture</title>
       <img src="iconOrange-white-removebg-preview.png" class="center" alt="Logo" style="float:right; width:100px; height:100px;">
@@ -16,7 +10,7 @@
      <style>
         
       .about-button{
-     background-color: #5a5aeb;
+     background-color: #000000;
      color: white;
      border:none;
      height: 30px;
@@ -36,7 +30,7 @@
     
     
       .contact-button{
-        background-color: #5a5aeb;
+        background-color: #000000;
      color: white;
      border:none;
      height: 30px;
@@ -54,16 +48,18 @@
      }
     
       .gallery-button{
-        background-color: #5a5aeb;
+        background-color:#000000;
        color: white;
        border:none;
-      height: 30px;
-      width: 100px;
-     border-radius: 2px;
-     font-weight: bold;
-     font-size: 15px;
-     cursor: pointer;
-     margin-left: 8px;
+       height: 30px;
+       width: 100px;
+       border-radius: 2px;
+       font-weight: bold;
+       font-size: 15px;
+       cursor: pointer;
+       margin-left: 8px;
+       margin-top: 10px;
+       display: inline-block;
      
     }
 
@@ -73,7 +69,7 @@
 
      .quote-button{
       
-        background-color: #5a5aeb;
+        background-color: #000000;
        color: white;
        border:none;
        height: 30px;
@@ -83,7 +79,8 @@
        font-size: 15px;
        cursor: pointer;
        margin-left: 1200px;
-       margin-top: 10px;
+       margin-top: 28px;
+       display: inline-block;
        
      
     }
@@ -102,6 +99,7 @@
     font-size: 50px;
     width: 500px;
     line-height: 24px;
+    margin-top: 58px;
     
    
     
@@ -113,17 +111,10 @@
   
   }
 
-  .span-phone{
-    color: aliceblue;
-    cursor: pointer;
-
-  }
-  .span-phone:hover{
-    text-decoration: underline;
-  }
+ 
 
   .span-email {
-    color: aliceblue;
+    color:#f75656;
     cursor: pointer;
   }
   .span-email:hover{
@@ -140,7 +131,7 @@
       if (currentTime.getHours() >= 6 && currentTime.getHours() < 18) {
           p = "white";
       } else {
-          p = "green";
+          p = "rgb(82, 71, 243)";
       }
       document.body.style.color = p;
   }
@@ -149,12 +140,21 @@
 
 
 <style>
-  body {font-family: Arial, sans-serif; background-color: #FF6633;}
-  h1 {color: rgba(13, 13, 83, 0.808);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex;}
-  h2 {color: rgb(247, 245, 242);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex;}
-  p {color: rgb(82, 71, 243);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex; font-family: arial;margin-top: 0px;}
+  body {font-family: Arial, sans-serif; background-color: #ffffff;}
+  h1 {color: rgba(0, 0, 0, 0.795);}
+  .center {text-align: center;}
+  .large-font {font-size: 30px;}
+  .box {display:flex;}
+  h2 {color: #7045d3;}
+  .center {text-align: center;}
+  .large-font {font-size: 40px;}
+  .box {display: block;}
+  p {color: rgb(255, 255, 255);}
+  .center {text-align: center;}
+  .large-font {font-size: 30px;}
+  .box {display:flex; font-family: arial;margin-top: 0px;}
   h3 {color: rgb(247, 245, 242)}
-  model-viewer { width:800px; height:600px; margin:0, auto}      
+       
 </style>
 
 
@@ -216,8 +216,8 @@
 
             var currentTime = new Date();
         
-            if (currentTime.getHours() >= 6 && currentTime.getHours() < 18) {document.body.style.backgroundColor = "#FF6633";} 
-            else {document.body.style.backgroundColor = "#000033";}
+            if (currentTime.getHours() >= 6 && currentTime.getHours() < 18) {document.body.style.backgroundColor = "#252525"} 
+            else {document.body.style.backgroundColor = "white";}
  
           
             </script>
@@ -227,11 +227,10 @@
 
            <main>
          
-  
        <h2 class="center">About</h2>
        <p class="center">Midnight Digital Manufacturing is a leading provider of 3D printing and manufacturing services. Our team of experts has years of experience in the industry and is dedicated to helping our clients turn their ideas into reality.</textcolor>
        <h2 class="center">Contact</h2>
-       <p class="center">To get in touch with us, please send an email to <span class="span-email"> midnight.digitalm@gmail.com</span> or give us a call at <span class="span-phone">+528112080205</span>.</p>
+       <p class="center">To get in touch with us, please send an email to <span class="span-email"> midnight.digitalm@gmail.com</span>.</p>
        <div style="text-align: center;">
        <img src="cofee_cuo-removebg-preview.png" alt="Coffee cup 3D printed in stainless steel" width="400" height="300">
        <img src="switch_contorl-removebg-preview.png" alt="3D printed Nintendo Switch controller" width="400" height="300">
