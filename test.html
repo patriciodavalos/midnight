@@ -1,0 +1,32 @@
+<html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+<body>
+<form>
+  <input type="file" id="fileInput" accept=".obj">
+</form>
+<div id="3d-container"></div>
+<script>
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera( 75, 800 / 600, 0.1, 1000 );
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize( 800, 600 );
+document.getElementById("3d-container").appendChild( renderer.domElement );
+
+const fileInput = document.getElementById("fileInput");
+const objLoader = new THREE.OBJLoader();
+fileInput.onchange = function() {
+    objLoader.load(fileInput.files[0], function(object) {
+        scene.add(object);
+    });
+};
+
+function render() {
+  requestAnimationFrame( render );
+  camera.lookAt( scene.position );
+  renderer.render( scene, camera );
+}
+render();
+const controls = new THREE.OrbitControls( camera, renderer.domElement );
+</script>
+</body>
+</html>
