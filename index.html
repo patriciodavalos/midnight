@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
       <head>
-    
+        <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
       </head>
       
 <style>
@@ -53,6 +53,7 @@
     <div class="content1">
       <img src="iconWhite-orange__1_-removebg-preview (1).png" class="center" alt="Logo" style="float:right; width:70px; height:70px; margin-top: 15px;margin-right: 130px;">
       <img src="midnight_logo-removebg-preview.png" class="center" alt="Logo" style="float:left; width:150x; height:30px; margin-left: 150px;margin-top: 35px;">
+      
       <button class="about-button"> 
         About
        </button>
@@ -307,12 +308,11 @@ video {
           </h1>
           
            <h2 class="center">Where we provide high-quality 3D printing and manufacturing services. </h2>
-           
-           
-           
-          
-           <h2 class="center"> Our team of experts can turn your ideas into reality, quickly and affordably.</h2>
 
+           <h2 class="center"> Our team of experts can turn your ideas into reality, quickly and affordably.</h2>
+           <img src="truck_design-removebg-preview.png" class="center" alt="Logo" style="float:left; width:550x; height:280px; margin-left: 150px;margin-top: 35px;">
+           <img src="truck-removebg-preview.png" class="center" alt="Logo" style="float:left; width:550x; height:280px; margin-left: 150px;margin-top: 35px;">
+           <img src="output-onlineimagetools.png" class="center" alt="Logo" style="float:left; width:550x; height:280px; margin-left: 150px;margin-top: 35px;">
            <div class="content2">
            <h3 class="instant-quote"  >Instant Quote</h3>
            <h2 class="center">To get an instant quote for your 3D printing or manufacturing project, simply upload your 3D model using the form below:</h2>
@@ -361,21 +361,26 @@ video {
          </div>
        </main>
 
-
+       6KF7vgRih4o0v5qhn3QolYQqGByKNoXcyvfDKaxn
        <script>
-        import axios from 'axios';
+   
+   const API_KEY = '6KF7vgRih4o0v5qhn3QolYQqGByKNoXcyvfDKaxn';
+const endpoint = 'https://api.printful.com/products';
 
-     axios.get('https://api.printify.com/v1/products', {
-    headers: {
-    'Authorization': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIzN2Q0YmQzMDM1ZmUxMWU5YTgwM2FiN2VlYjNjY2M5NyIsImp0aSI6ImNiY2ZlYmI3Y2YwZTBhYzlhN2VlZTU3ODRiYWE0ZDA2YmNiNDYzNGUyODg4NzE5Mjk1Mjg5MTc3MTAzNWRlYWI2Nzk5NGVkNmI3ZmM4OGIwIiwiaWF0IjoxNjc1NTU4NjcyLjU3NzQ4LCJuYmYiOjE2NzU1NTg2NzIuNTc3NDgzLCJleHAiOjE3MDcwOTQ2NzIuNTUwNDgsInN1YiI6IjExODgxNjExIiwic2NvcGVzIjpbInNob3BzLm1hbmFnZSIsInNob3BzLnJlYWQiLCJjYXRhbG9nLnJlYWQiLCJvcmRlcnMucmVhZCIsIm9yZGVycy53cml0ZSIsInByb2R1Y3RzLnJlYWQiLCJwcm9kdWN0cy53cml0ZSIsIndlYmhvb2tzLnJlYWQiLCJ3ZWJob29rcy53cml0ZSIsInVwbG9hZHMucmVhZCIsInVwbG9hZHMud3JpdGUiLCJwcmludF9wcm92aWRlcnMucmVhZCJdfQ.AqbexjDUtnzNxACXEDdwxyDEdXMEnn65wGE5H-sDeLwNXAAekKLeW1rzJNHnV7EY3MI_C75IbKk6bZv0oXE',
-    'Content-Type': 'application/json'
-  }})
+fetch(endpoint, {
+  headers: {
+    'Authorization': 'Basic ' + btoa(API_KEY + ':')
+  }
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error(error));
+
+    
+
+
+
   
-  .then(response => {console.log(response.data);})
-  .catch(error => {console.error(error);});
-
-      
-       
       </script>
 
         <footer>

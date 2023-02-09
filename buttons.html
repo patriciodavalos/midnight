@@ -1,43 +1,19 @@
 <html>
 
-<style>
+<script>
         
-  .about-button{
- background-color: #000033;
- color: white;
- border:none;
- height: 30px;
-  width: 100px;
- border-radius: 2px;
- cursor: pointer;
- }
-.about-button:hover{
-    opacity: 0.8;
+        const API_KEY = '6KF7vgRih4o0v5qhn3QolYQqGByKNoXcyvfDKaxn';
+const endpoint = 'https://api.printful.com/products';
 
-}
-.about-button:active{
-    opacity: 0.4;
+fetch(endpoint, {
+  headers: {
+    'Authorization': 'Basic ' + btoa(API_KEY + ':')
+  }
+})
+.then(response => response.json())
+.then(data => console.log(data))
+.catch(error => console.error(error));
 
-}
+</script>
 
-  .contact-button{
- background-color: #000033;
- color: white;
- border:none;
- height: 30px;
- width: 100px;
- border-radius: 2px;
- cursor: pointer;
- }
-
-  .gallery-button{
-   background-color: #000033;
-   color: white;
-   border:none;
-  height: 30px;
-  width: 100px;
- border-radius: 2px;
- cursor: pointer;
-}
-</style>
 </html>
