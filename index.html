@@ -1,67 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <title>3D Viewer - STL and STEP</title>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/STLLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three-cad-viewer@1.5.1/dist/three-cad-viewer.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizador 3D para STL</title>
   <style>
-    body { margin: 0; font-family: sans-serif; text-align: center; background: #f0f0f0; }
-    canvas { display: block; }
-    #viewer-container { width: 100%; height: 80vh; background: white; }
-    input { margin: 10px; }
+    body { margin: 0; overflow: hidden; }
+    canvas { width: 100%; height: 100vh; }
+    #fileInput { position: absolute; top: 10px; left: 10px; }
   </style>
 </head>
 <body>
-  <h2>🧊 3D Viewer para STL y STEP</h2>
-  <input type="file" id="fileInput" accept=".stl,.step,.stp" />
-  <div id="viewer-container"></div>
-
+  <input type="file" id="fileInput" accept=".stl" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
   <script>
-    const input = document.getElementById('fileInput');
-    const container = document.getElementById('viewer-container');
+    // Escena, cámara y renderizador
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
 
-    input.addEventListener('change', async (event) => {
+    // Controles de órbita para rotar y zoom
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    // Iluminación
+    const light = new THREE.DirectionalLight(0xffffff, 0.8);
+    light.position.set(1, 1, 1);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x404040));
+
+    // Cargar archivo STL
+    const loader = new THREE.STLLoader();
+    const fileInput = document.getElementById('fileInput');
+    fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
-      if (!file) return;
-
-      const ext = file.name.split('.').pop().toLowerCase();
-      container.innerHTML = ""; // clear previous
-
-      if (ext === 'stl') {
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
-
-        const loader = new THREE.STLLoader();
+      if (file) {
         const reader = new FileReader();
-        reader.onload = function (e) {
-          const geometry = loader.parse(e.target.result);
-          const material = new THREE.MeshNormalMaterial();
+        reader.onload = (e) => {
+          const contents = e.target.result;
+          const geometry = loader.parse(contents);
+          const material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
           const mesh = new THREE.Mesh(geometry, material);
-          scene.add(mesh);
-          camera.position.z = 100;
 
-          const animate = function () {
-            requestAnimationFrame(animate);
-            mesh.rotation.y += 0.01;
-            renderer.render(scene, camera);
-          };
-          animate();
+          // Limpiar escena previa
+          while (scene.children.length > 2) {
+            scene.remove(scene.children[2]);
+          }
+
+          // Centrar y escalar el modelo
+          geometry.computeBoundingBox();
+          const box = geometry.boundingBox;
+          const center = box.getCenter(new THREE.Vector3());
+          const size = box.getSize(new THREE.Vector3());
+          const maxDim = Math.max(size.x, size.y, size.z);
+          const scale = 10 / maxDim;
+          mesh.scale.set(scale, scale, scale);
+          mesh.position.sub(center.multiplyScalar(scale));
+
+          scene.add(mesh);
+
+          // Ajustar cámara
+          camera.position.z = maxDim * scale * 2;
         };
         reader.readAsArrayBuffer(file);
-      } else if (ext === 'step' || ext === 'stp') {
-        const viewer = new TCViewer.Viewer(container, {
-          backgroundColor: "#ffffff"
-        });
-        const arrayBuffer = await file.arrayBuffer();
-        viewer.loadModelFromBuffer(arrayBuffer, "stp");
-      } else {
-        alert("Formato no compatible. Usa STL o STEP.");
       }
+    });
+
+    // Animación
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Ajustar al redimensionar ventana
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
     });
   </script>
 </body>
