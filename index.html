@@ -11,9 +11,10 @@
     }
     #viewerContainer {
       width: 100%;
-      height: 400px; /* Altura fija, ajustable según necesidades */
+      height: 400px; /* Altura fija, ajustable */
       position: relative;
-      border: 1px solid #ccc; /* Borde para mejor visibilidad */
+      border: 1px solid #ccc;
+      background: #f8f8f8; /* Fondo claro para el contenedor */
     }
     canvas {
       width: 100% !important;
@@ -21,14 +22,37 @@
       display: block;
     }
     #fileInput {
+      display: none; /* Ocultar input original */
+    }
+    #uploadButton {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 10px 20px;
+      background: #333;
+      color: #ff6200; /* Letras naranjas */
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
       z-index: 10;
+      transition: background 0.3s;
+    }
+    #uploadButton:hover {
+      background: #555;
+    }
+    #uploadButton.hidden {
+      display: none; /* Ocultar botón tras cargar archivo */
     }
     @media (max-width: 600px) {
       #viewerContainer {
         height: 300px; /* Reducir altura en pantallas pequeñas */
+      }
+      #uploadButton {
+        font-size: 14px;
+        padding: 8px 16px;
       }
     }
   </style>
@@ -36,13 +60,21 @@
 <body>
   <div id="viewerContainer">
     <input type="file" id="fileInput" accept=".stl" />
+    <button id="uploadButton">Cargar archivo STL</button>
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
   <script>
-    // Obtener contenedor
+    // Obtener elementos
     const container = document.getElementById('viewerContainer');
+    const fileInput = document.getElementById('fileInput');
+    const uploadButton = document.getElementById('uploadButton');
+
+    // Activar input al hacer clic en el botón
+    uploadButton.addEventListener('click', () => {
+      fileInput.click();
+    });
 
     // Escena, cámara y renderizador
     const scene = new THREE.Scene();
@@ -64,7 +96,6 @@
 
     // Cargar archivo STL
     const loader = new THREE.STLLoader();
-    const fileInput = document.getElementById('fileInput');
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file.name.toLowerCase().endsWith('.stl')) {
@@ -72,6 +103,9 @@
         return;
       }
       if (file) {
+        // Ocultar botón al cargar archivo
+        uploadButton.classList.add('hidden');
+
         const reader = new FileReader();
         reader.onload = (e) => {
           const contents = e.target.result;
