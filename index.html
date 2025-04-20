@@ -5,23 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visualizador 3D para STL</title>
   <style>
-    body { margin: 0; overflow: hidden; }
-    canvas { width: 100%; height: 100vh; }
-    #fileInput { position: absolute; top: 10px; left: 10px; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+    #viewerContainer {
+      width: 100%;
+      height: 400px; /* Altura fija, ajustable según necesidades */
+      position: relative;
+      border: 1px solid #ccc; /* Borde para mejor visibilidad */
+    }
+    canvas {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+    #fileInput {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+    }
+    @media (max-width: 600px) {
+      #viewerContainer {
+        height: 300px; /* Reducir altura en pantallas pequeñas */
+      }
+    }
   </style>
 </head>
 <body>
-  <input type="file" id="fileInput" accept=".stl" />
+  <div id="viewerContainer">
+    <input type="file" id="fileInput" accept=".stl" />
+  </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
   <script>
+    // Obtener contenedor
+    const container = document.getElementById('viewerContainer');
+
     // Escena, cámara y renderizador
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(renderer.domElement);
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
 
     // Controles de órbita para rotar y zoom
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -39,6 +67,10 @@
     const fileInput = document.getElementById('fileInput');
     fileInput.addEventListener('change', (event) => {
       const file = event.target.files[0];
+      if (!file.name.toLowerCase().endsWith('.stl')) {
+        alert('Por favor, sube un archivo .STL');
+        return;
+      }
       if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -81,9 +113,11 @@
 
     // Ajustar al redimensionar ventana
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(width, height);
     });
   </script>
 </body>
