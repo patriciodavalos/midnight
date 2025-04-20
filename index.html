@@ -1,361 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Model Viewer</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: black url('https://images.unsplash.com/photo-1570288676578-1f1d3f8a1e2f?fit=crop&w=1920&h=1080') no-repeat center center fixed;
-            background-size: cover;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-        }
-        #fileInput {
-            display: none;
-        }
-        #uploadButton {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #f28c38;
-            color: white;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 18px;
-            z-index: 10;
-        }
-        #uploadButton:hover {
-            background-color: #e07b30;
-        }
-        #errorMessage {
-            position: absolute;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: red;
-            font-size: 16px;
-            z-index: 10;
-            display: none;
-            text-align: center;
-        }
-        #loadingMessage {
-            position: absolute;
-            top: 55%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: white;
-            font-size: 16px;
-            z-index: 10;
-            display: none;
-        }
-        #infoPanel {
-            position: absolute;
-            top: 50%;
-            left: 10px;
-            transform: translateY(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-            z-index: 10;
-            display: none;
-        }
-        #xrayButton {
-            background-color: #f28c38;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            margin-top: 10px;
-            display: none;
-            z-index: 10;
-        }
-        #xrayButton:hover {
-            background-color: #e07b30;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <title>3D Viewer - STL and STEP</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/STLLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three-cad-viewer@1.5.1/dist/three-cad-viewer.min.js"></script>
+  <style>
+    body { margin: 0; font-family: sans-serif; text-align: center; background: #f0f0f0; }
+    canvas { display: block; }
+    #viewer-container { width: 100%; height: 80vh; background: white; }
+    input { margin: 10px; }
+  </style>
 </head>
 <body>
-    <input type="file" id="fileInput" accept=".stl,.step,.stp" />
-    <button id="uploadButton">Upload 3D Model</button>
-    <div id="errorMessage"></div>
-    <div id="loadingMessage">Loading file, please wait...</div>
-    <div id="infoPanel">
-        <div id="fileName"></div>
-        <div id="volume"></div>
-        <div id="dimensions"></div>
-        <button id="xrayButton">X-Ray Mode</button>
-    </div>
+  <h2>🧊 3D Viewer para STL y STEP</h2>
+  <input type="file" id="fileInput" accept=".stl,.step,.stp" />
+  <div id="viewer-container"></div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three-step-loader@1.0.2/dist/STEPLoader.min.js"></script>
+  <script>
+    const input = document.getElementById('fileInput');
+    const container = document.getElementById('viewer-container');
 
-    <script>
-        // Scene setup
+    input.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const ext = file.name.split('.').pop().toLowerCase();
+      container.innerHTML = ""; // clear previous
+
+      if (ext === 'stl') {
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0x404040);
-        scene.add(ambientLight);
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-        directionalLight.position.set(1, 1, 1);
-        scene.add(directionalLight);
+        const loader = new THREE.STLLoader();
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const geometry = loader.parse(e.target.result);
+          const material = new THREE.MeshNormalMaterial();
+          const mesh = new THREE.Mesh(geometry, material);
+          scene.add(mesh);
+          camera.position.z = 100;
 
-        // Orbit controls
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-
-        // Camera position
-        camera.position.z = 100;
-
-        // File input handling
-        const fileInput = document.getElementById('fileInput');
-        const uploadButton = document.getElementById('uploadButton');
-        const errorMessage = document.getElementById('errorMessage');
-        const loadingMessage = document.getElementById('loadingMessage');
-        const infoPanel = document.getElementById('infoPanel');
-        const fileNameDisplay = document.getElementById('fileName');
-        const volumeDisplay = document.getElementById('volume');
-        const dimensionsDisplay = document.getElementById('dimensions');
-        const xrayButton = document.getElementById('xrayButton');
-
-        let currentModel = null;
-        let isXrayMode = false;
-        const originalMaterials = new Map();
-
-        // Function to calculate volume of a mesh (approximation for closed meshes)
-        function calculateVolume(geometry) {
-            let volume = 0;
-            const positions = geometry.attributes.position.array;
-            for (let i = 0; i < positions.length; i += 9) {
-                const v1 = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
-                const v2 = new THREE.Vector3(positions[i + 3], positions[i + 4], positions[i + 5]);
-                const v3 = new THREE.Vector3(positions[i + 6], positions[i + 7], positions[i + 8]);
-                volume += v1.clone().cross(v2).dot(v3) / 6.0;
-            }
-            return Math.abs(volume);
-        }
-
-        // Toggle X-Ray mode
-        xrayButton.addEventListener('click', () => {
-            if (!currentModel) return;
-            isXrayMode = !isXrayMode;
-            xrayButton.textContent = isXrayMode ? 'Normal Mode' : 'X-Ray Mode';
-
-            if (currentModel.isMesh) {
-                if (isXrayMode) {
-                    originalMaterials.set(currentModel, currentModel.material);
-                    currentModel.material = new THREE.MeshBasicMaterial({
-                        color: 0xaaaaaa,
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.5
-                    });
-                } else {
-                    currentModel.material = originalMaterials.get(currentModel);
-                }
-            } else {
-                currentModel.traverse((child) => {
-                    if (child.isMesh) {
-                        if (isXrayMode) {
-                            originalMaterials.set(child, child.material);
-                            child.material = new THREE.MeshBasicMaterial({
-                                color: 0xaaaaaa,
-                                wireframe: true,
-                                transparent: true,
-                                opacity: 0.5
-                            });
-                        } else {
-                            child.material = originalMaterials.get(child);
-                        }
-                    }
-                });
-            }
-        });
-
-        // Trigger file input
-        uploadButton.addEventListener('click', () => {
-            console.log('Upload button clicked at', new Date().toISOString());
-            fileInput.value = ''; // Clear previous selection
-            try {
-                fileInput.click();
-            } catch (err) {
-                showError('Failed to open file picker. Please try again or use a different browser.');
-                console.error('File input click error:', err);
-            }
-        });
-
-        // Handle file selection
-        fileInput.addEventListener('change', (event) => {
-            console.log('File input changed at', new Date().toISOString());
-            const file = event.target.files[0];
-            if (!file) {
-                showError('No file selected. Please choose an .STL or .STEP file.');
-                console.error('No file selected');
-                return;
-            }
-
-            console.log('Selected file:', file.name, 'Size:', file.size, 'Type:', file.type);
-            const extension = file.name.split('.').pop().toLowerCase();
-            if (!['stl', 'step', 'stp'].includes(extension)) {
-                showError('Invalid file type. Please upload an .STL or .STEP file.');
-                console.error('Invalid file type:', extension);
-                return;
-            }
-
-            // Check file size (limit to 50MB)
-            if (file.size > 50 * 1024 * 1024) {
-                showError('File is too large. Please upload a file smaller than 50MB.');
-                console.error('File too large:', file.size);
-                return;
-            }
-
-            // Show loading message
-            loadingMessage.style.display = 'block';
-            errorMessage.style.display = 'none';
-            uploadButton.style.display = 'none';
-            infoPanel.style.display = 'none';
-            xrayButton.style.display = 'none';
-
-            // Clear previous model
-            if (currentModel) {
-                scene.remove(currentModel);
-                currentModel = null;
-                originalMaterials.clear();
-            }
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                console.log('File read successfully, size:', e.target.result.byteLength || e.target.result.length);
-                loadingMessage.style.display = 'none';
-                try {
-                    if (extension === 'stl') {
-                        const loader = new THREE.STLLoader();
-                        const geometry = loader.parse(e.target.result);
-                        const material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
-                        const mesh = new THREE.Mesh(geometry, material);
-                        scene.add(mesh);
-                        currentModel = mesh;
-
-                        // Center and scale model
-                        const box = new THREE.Box3().setFromObject(mesh);
-                        const center = box.getCenter(new THREE.Vector3());
-                        const size = box.getSize(new THREE.Vector3());
-                        mesh.position.sub(center);
-                        const maxDim = Math.max(size.x, size.y, size.z);
-                        const scale = 50 / maxDim;
-                        mesh.scale.set(scale, scale, scale);
-
-                        // Update info panel (metric units)
-                        const volume = calculateVolume(geometry) * (scale * scale * scale) / 1000; // mm³ to cm³
-                        fileNameDisplay.textContent = `File: ${file.name}`;
-                        volumeDisplay.textContent = `Volume: ${volume.toFixed(2)} cm³`;
-                        dimensionsDisplay.textContent = `Dimensions: X: ${size.x.toFixed(2)} mm, Y: ${size.y.toFixed(2)} mm, Z: ${size.z.toFixed(2)} mm`;
-                        infoPanel.style.display = 'block';
-                        xrayButton.style.display = 'block';
-                    } else if (extension === 'step' || extension === 'stp') {
-                        const loader = new THREE.STEPLoader();
-                        loader.loadFromString(e.target.result, (object) => {
-                            scene.add(object);
-                            currentModel = object;
-
-                            // Center and scale model
-                            const box = new THREE.Box3().setFromObject(object);
-                            const center = box.getCenter(new THREE.Vector3());
-                            const size = box.getSize(new THREE.Vector3());
-                            object.position.sub(center);
-                            const maxDim = Math.max(size.x, size.y, size.z);
-                            const scale = 50 / maxDim;
-                            object.scale.set(scale, scale, scale);
-
-                            // Update info panel (no volume for STEP)
-                            fileNameDisplay.textContent = `File: ${file.name}`;
-                            volumeDisplay.textContent = `Volume: (Not calculated for STEP)`;
-                            dimensionsDisplay.textContent = `Dimensions: X: ${size.x.toFixed(2)} mm, Y: ${size.y.toFixed(2)} mm, Z: ${size.z.toFixed(2)} mm`;
-                            infoPanel.style.display = 'block';
-                            xrayButton.style.display = 'block';
-                        }, (error) => {
-                            loadingMessage.style.display = 'none';
-                            showError('Error loading STEP file. Please ensure the file is valid.');
-                            console.error('STEP loader error:', error);
-                        });
-                    }
-                } catch (err) {
-                    loadingMessage.style.display = 'none';
-                    showError('Error processing file. Please try another file.');
-                    console.error('Processing error:', err);
-                }
-            };
-
-            reader.onerror = () => {
-                loadingMessage.style.display = 'none';
-                showError('Error reading file. Please try again.');
-                console.error('File reading error');
-            };
-
-            if (extension === 'stl') {
-                reader.readAsArrayBuffer(file);
-            } else {
-                reader.readAsText(file);
-            }
-        });
-
-        // Show error message
-        function showError(message) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            uploadButton.style.display = 'block';
-            loadingMessage.style.display = 'none';
-        }
-
-        // Animation loop
-        function animate() {
+          const animate = function () {
             requestAnimationFrame(animate);
-            controls.update();
+            mesh.rotation.y += 0.01;
             renderer.render(scene, camera);
-        }
-        animate();
-
-        // Handle window resize
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        // Fallback for background image loading failure
-        const bgImage = new Image();
-        bgImage.src = 'https://images.unsplash.com/photo-1570288676578-1f1d3f8a1e2f?fit=crop&w=1920&h=1080';
-        bgImage.onerror = () => {
-            document.body.style.background = 'black';
-            console.warn('Background image failed to load, falling back to black');
+          };
+          animate();
         };
-    </script>
+        reader.readAsArrayBuffer(file);
+      } else if (ext === 'step' || ext === 'stp') {
+        const viewer = new TCViewer.Viewer(container, {
+          backgroundColor: "#ffffff"
+        });
+        const arrayBuffer = await file.arrayBuffer();
+        viewer.loadModelFromBuffer(arrayBuffer, "stp");
+      } else {
+        alert("Formato no compatible. Usa STL o STEP.");
+      }
+    });
+  </script>
 </body>
 </html>
