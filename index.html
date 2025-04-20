@@ -1,158 +1,192 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visualizador 3D para STL</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-    }
-    #viewerContainer {
-      width: 100%;
-      height: 400px; /* Altura fija, ajustable */
-      position: relative;
-      border: 1px solid #ccc;
-      background: #f8f8f8; /* Fondo claro para el contenedor */
-    }
-    canvas {
-      width: 100% !important;
-      height: 100% !important;
-      display: block;
-    }
-    #fileInput {
-      display: none; /* Ocultar input original */
-    }
-    #uploadButton {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      padding: 10px 20px;
-      background: #333;
-      color: #ff6200; /* Letras naranjas */
-      font-size: 16px;
-      font-weight: bold;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      z-index: 10;
-      transition: background 0.3s;
-    }
-    #uploadButton:hover {
-      background: #555;
-    }
-    #uploadButton.hidden {
-      display: none; /* Ocultar botón tras cargar archivo */
-    }
-    @media (max-width: 600px) {
-      #viewerContainer {
-        height: 300px; /* Reducir altura en pantallas pequeñas */
-      }
-      #uploadButton {
-        font-size: 14px;
-        padding: 8px 16px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black url('https://images.unsplash.com/photo-1570288676578-1f1d3f8a1e2f') no-repeat center center fixed;
+            background-size: cover;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #fileInput {
+            display: none;
+        }
+        #uploadButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #f28c38;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 10;
+        }
+        #uploadButton:hover {
+            background-color: #e07b30;
+        }
+        #errorMessage {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-size: 16px;
+            z-index: 10;
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <div id="viewerContainer">
-    <input type="file" id="fileInput" accept=".stl" />
-    <button id="uploadButton">Cargar archivo STL</button>
-  </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
-  <script>
-    // Obtener elementos
-    const container = document.getElementById('viewerContainer');
-    const fileInput = document.getElementById('fileInput');
-    const uploadButton = document.getElementById('uploadButton');
+    <input type="file" id="fileInput" accept=".stl,.step,.stp" />
+    <button id="uploadButton">Upload 3D Model</button>
+    <div id="errorMessage"></div>
 
-    // Activar input al hacer clic en el botón
-    uploadButton.addEventListener('click', () => {
-      fileInput.click();
-    });
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three-step-loader@1.0.2/dist/STEPLoader.min.js"></script>
 
-    // Escena, cámara y renderizador
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    container.appendChild(renderer.domElement);
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
 
-    // Controles de órbita para rotar y zoom
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
 
-    // Iluminación
-    const light = new THREE.DirectionalLight(0xffffff, 0.8);
-    light.position.set(1, 1, 1);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0x404040));
+        // Orbit controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
 
-    // Cargar archivo STL
-    const loader = new THREE.STLLoader();
-    fileInput.addEventListener('change', (event) => {
-      const file = event.target.files[0];
-      if (!file.name.toLowerCase().endsWith('.stl')) {
-        alert('Por favor, sube un archivo .STL');
-        return;
-      }
-      if (file) {
-        // Ocultar botón al cargar archivo
-        uploadButton.classList.add('hidden');
+        // Camera position
+        camera.position.z = 100;
 
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const contents = e.target.result;
-          const geometry = loader.parse(contents);
-          const material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
-          const mesh = new THREE.Mesh(geometry, material);
+        // File input handling
+        const fileInput = document.getElementById('fileInput');
+        const uploadButton = document.getElementById('uploadButton');
+        const errorMessage = document.getElementById('errorMessage');
 
-          // Limpiar escena previa
-          while (scene.children.length > 2) {
-            scene.remove(scene.children[2]);
-          }
+        // Trigger file input on button click
+        uploadButton.addEventListener('click', () => {
+            fileInput.click();
+        });
 
-          // Centrar y escalar el modelo
-          geometry.computeBoundingBox();
-          const box = geometry.boundingBox;
-          const center = box.getCenter(new THREE.Vector3());
-          const size = box.getSize(new THREE.Vector3());
-          const maxDim = Math.max(size.x, size.y, size.z);
-          const scale = 10 / maxDim;
-          mesh.scale.set(scale, scale, scale);
-          mesh.position.sub(center.multiplyScalar(scale));
+        // Handle file selection
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                showError('No file selected. Please choose an .STL or .STEP file.');
+                return;
+            }
 
-          scene.add(mesh);
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (!['stl', 'step', 'stp'].includes(extension)) {
+                showError('Invalid file type. Please upload an .STL or .STEP file.');
+                return;
+            }
 
-          // Ajustar cámara
-          camera.position.z = maxDim * scale * 2;
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
+            // Hide button and clear errors
+            uploadButton.style.display = 'none';
+            errorMessage.style.display = 'none';
 
-    // Animación
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    }
-    animate();
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    if (extension === 'stl') {
+                        const loader = new THREE.STLLoader();
+                        const geometry = loader.parse(e.target.result);
+                        const material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                        const mesh = new THREE.Mesh(geometry, material);
+                        scene.add(mesh);
 
-    // Ajustar al redimensionar ventana
-    window.addEventListener('resize', () => {
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    });
-  </script>
+                        // Center and scale model
+                        const box = new THREE.Box3().setFromObject(mesh);
+                        const center = box.getCenter(new THREE.Vector3());
+                        const size = box.getSize(new THREE.Vector3());
+                        mesh.position.sub(center);
+                        const maxDim = Math.max(size.x, size.y, size.z);
+                        const scale = 50 / maxDim;
+                        mesh.scale.set(scale, scale, scale);
+                    } else if (extension === 'step' || extension === 'stp') {
+                        const loader = new THREE.STEPLoader();
+                        loader.loadFromString(e.target.result, (object) => {
+                            scene.add(object);
+
+                            // Center and scale model
+                            const box = new THREE.Box3().setFromObject(object);
+                            const center = box.getCenter(new THREE.Vector3());
+                            const size = box.getSize(new THREE.Vector3());
+                            object.position.sub(center);
+                            const maxDim = Math.max(size.x, size.y, size.z);
+                            const scale = 50 / maxDim;
+                            object.scale.set(scale, scale, scale);
+                        }, (error) => {
+                            showError('Error loading STEP file. Please ensure the file is valid.');
+                        });
+                    }
+                } catch (err) {
+                    showError('Error processing file. Please try another file.');
+                }
+            };
+
+            reader.onerror = () => {
+                showError('Error reading file. Please try again.');
+            };
+
+            if (extension === 'stl') {
+                reader.readAsArrayBuffer(file);
+            } else {
+                reader.readAsText(file);
+            }
+        });
+
+        // Show error message
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            uploadButton.style.display = 'block'; // Show button again to retry
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
 </body>
 </html>
