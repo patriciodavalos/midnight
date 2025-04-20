@@ -8,8 +8,7 @@
         body {
             margin: 0;
             overflow: hidden;
-            background: black url('https://images.unsplash.com/photo-1570288676578-1f1d3f8a1e2f?fit=crop&w=1920&h=1080') no-repeat center center fixed;
-            background-size: cover;
+            background: #000000;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -23,9 +22,6 @@
             height: 100%;
         }
         #fileInput {
-            display: none;
-        }
-        #uploadButton {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -39,8 +35,14 @@
             font-size: 18px;
             z-index: 10;
             pointer-events: auto;
+            appearance: none;
+            -webkit-appearance: none;
+            text-align: center;
         }
-        #uploadButton:hover {
+        #fileInput::before {
+            content: 'Upload 3D File';
+        }
+        #fileInput:hover {
             background-color: #e07b30;
         }
         #errorMessage {
@@ -77,7 +79,9 @@
             z-index: 10;
             display: none;
         }
-        #xrayButton {
+        #xrayButton, #analysisButton {
+            position: absolute;
+            top: 10px;
             background-color: #f28c38;
             color: white;
             padding: 10px 20px;
@@ -85,25 +89,82 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 14px;
-            margin-top: 10px;
             display: none;
             z-index: 10;
         }
-        #xrayButton:hover {
+        #xrayButton {
+            left: calc(50% - 60px);
+            transform: translateX(-50%);
+        }
+        #analysisButton {
+            left: calc(50% + 60px);
+            transform: translateX(-50%);
+        }
+        #xrayButton:hover, #analysisButton:hover {
             background-color: #e07b30;
+        }
+        #analysisPanel {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 10;
+            display: none;
+            width: 200px;
+        }
+        #analysisPanel button {
+            display: block;
+            width: 100%;
+            background-color: #f28c38;
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        #analysisPanel button:hover {
+            background-color: #e07b30;
+        }
+        #analysisPanel input[type="range"] {
+            width: 100%;
+            margin: 10px 0;
+        }
+        #analysisPanel p {
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
     <input type="file" id="fileInput" accept=".stl,.step,.stp" />
-    <button id="uploadButton">Upload 3D Model</button>
     <div id="errorMessage"></div>
     <div id="loadingMessage">Loading file, please wait...</div>
     <div id="infoPanel">
         <div id="fileName"></div>
         <div id="volume"></div>
         <div id="dimensions"></div>
-        <button id="xrayButton">X-Ray Mode</button>
+    </div>
+    <button id="xrayButton">X-Ray Mode</button>
+    <button id="analysisButton">Analysis</button>
+    <div id="analysisPanel">
+        <button id="wallThicknessButton">Wall Thickness</button>
+        <button id="measurementButton">Point-to-Point Measurement</button>
+        <button id="crossSectionButton">Cross-Section View</button>
+        <div id="analysisResults"></div>
+        <div id="crossSectionControls" style="display: none;">
+            <p>Rotate Plane Around:</p>
+            <button id="xAxisButton">X-Axis</button>
+            <button id="yAxisButton">Y-Axis</button>
+            <button id="zAxisButton">Z-Axis</button>
+            <p>Rotation: <span id="rotationValue">0</span>°</p>
+            <input type="range" id="rotation" min="0" max="360" value="0">
+        </div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
@@ -120,6 +181,7 @@
         const renderer = new THREE.WebGLRenderer();
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
+        renderer.localClippingEnabled = true;
 
         // Lighting
         const ambientLight = new THREE.AmbientLight(0x404040);
@@ -135,7 +197,6 @@
 
         // File input handling
         const fileInput = document.getElementById('fileInput');
-        const uploadButton = document.getElementById('uploadButton');
         const errorMessage = document.getElementById('errorMessage');
         const loadingMessage = document.getElementById('loadingMessage');
         const infoPanel = document.getElementById('infoPanel');
@@ -143,42 +204,130 @@
         const volumeDisplay = document.getElementById('volume');
         const dimensionsDisplay = document.getElementById('dimensions');
         const xrayButton = document.getElementById('xrayButton');
+        const analysisButton = document.getElementById('analysisButton');
+        const analysisPanel = document.getElementById('analysisPanel');
+        const wallThicknessButton = document.getElementById('wallThicknessButton');
+        const measurementButton = document.getElementById('measurementButton');
+        const crossSectionButton = document.getElementById('crossSectionButton');
+        const analysisResults = document.getElementById('analysisResults');
+        const crossSectionControls = document.getElementById('crossSectionControls');
+        const xAxisButton = document.getElementById('xAxisButton');
+        const yAxisButton = document.getElementById('yAxisButton');
+        const zAxisButton = document.getElementById('zAxisButton');
+        const rotation = document.getElementById('rotation');
+        const rotationValue = document.getElementById('rotationValue');
 
         let currentModel = null;
         let isXrayMode = false;
+        let isAnalysisMode = false;
+        let isMeasuring = false;
+        let isCrossSectionActive = false;
+        let measurementPoints = [];
+        let measurementLine = null;
+        let measurementLabel = null;
+        let measurementMarkers = [];
         const originalMaterials = new Map();
+        let clippingPlanes = [];
+        let planeMesh = null;
+        let coordinateAxes = null;
+        let currentAxis = 'x';
+        let rotationAngle = 0;
+        let isDragging = false;
+        let lastMouseX = 0;
 
-        // Function to calculate volume of a mesh (approximation for closed meshes)
+        // Raycaster for point selection
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Function to calculate volume of a mesh
         function calculateVolume(geometry) {
             let volume = 0;
-            const positions = geometry.attributes.position.array;
-            for (let i = 0; i < positions.length; i += 9) {
-                const v1 = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
-                const v2 = new THREE.Vector3(positions[i + 3], positions[i + 4], positions[i + 5]);
-                const v3 = new THREE.Vector3(positions[i + 6], positions[i + 7], positions[i + 8]);
-                volume += v1.clone().cross(v2).dot(v3) / 6.0;
+            try {
+                const positions = geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 9) {
+                    const v1 = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+                    const v2 = new THREE.Vector3(positions[i + 3], positions[i + 4], positions[i + 5]);
+                    const v3 = new THREE.Vector3(positions[i + 6], positions[i + 7], positions[i + 8]);
+                    volume += v1.clone().cross(v2).dot(v3) / 6.0;
+                }
+                return Math.abs(volume);
+            } catch (err) {
+                console.error('Volume calculation error:', err);
+                return 0;
             }
-            return Math.abs(volume);
         }
 
         // Function to focus camera on model
         function focusCameraOnModel(model) {
-            const box = new THREE.Box3().setFromObject(model);
-            const center = box.getCenter(new THREE.Vector3());
-            const size = box.getSize(new THREE.Vector3());
-            const maxDim = Math.max(size.x, size.y, size.z);
+            try {
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
 
-            // Calculate camera distance to fit model in view
-            const fov = camera.fov * (Math.PI / 180);
-            const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5;
+                const fov = camera.fov * (Math.PI / 180);
+                const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5;
 
-            // Position camera
-            camera.position.set(center.x, center.y, center.z + distance);
-            camera.lookAt(center);
+                camera.position.set(center.x, center.y, center.z + distance);
+                camera.lookAt(center);
 
-            // Update controls
-            controls.target.copy(center);
-            controls.update();
+                controls.target.copy(center);
+                controls.update();
+            } catch (err) {
+                console.error('Camera focus error:', err);
+            }
+        }
+
+        // Function to create coordinate axes
+        function createCoordinateAxes() {
+            try {
+                if (coordinateAxes) {
+                    scene.remove(coordinateAxes);
+                }
+                coordinateAxes = new THREE.Group();
+
+                const arrowLength = 20;
+                const arrowHeadLength = 4;
+                const arrowHeadWidth = 2;
+
+                // X-axis (red)
+                const xArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(1, 0, 0),
+                    new THREE.Vector3(0, 0, 0),
+                    arrowLength,
+                    0xff0000,
+                    arrowHeadLength,
+                    arrowHeadWidth
+                );
+                coordinateAxes.add(xArrow);
+
+                // Y-axis (green)
+                const yArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(0, 1, 0),
+                    new THREE.Vector3(0, 0, 0),
+                    arrowLength,
+                    0x00ff00,
+                    arrowHeadLength,
+                    arrowHeadWidth
+                );
+                coordinateAxes.add(yArrow);
+
+                // Z-axis (blue)
+                const zArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(0, 0, 1),
+                    new THREE.Vector3(0, 0, 0),
+                    arrowLength,
+                    0x0000ff,
+                    arrowHeadLength,
+                    arrowHeadWidth
+                );
+                coordinateAxes.add(zArrow);
+
+                scene.add(coordinateAxes);
+                console.log('Coordinate axes created at', new Date().toISOString());
+            } catch (err) {
+                console.error('Create coordinate axes error:', err);
+            }
         }
 
         // Toggle X-Ray mode
@@ -188,47 +337,432 @@
             isXrayMode = !isXrayMode;
             xrayButton.textContent = isXrayMode ? 'Normal Mode' : 'X-Ray Mode';
 
-            if (currentModel.isMesh) {
-                if (isXrayMode) {
-                    originalMaterials.set(currentModel, currentModel.material);
-                    currentModel.material = new THREE.MeshBasicMaterial({
-                        color: 0xaaaaaa,
-                        wireframe: true,
-                        transparent: true,
-                        opacity: 0.5
-                    });
-                } else {
-                    currentModel.material = originalMaterials.get(currentModel);
-                }
-            } else {
-                currentModel.traverse((child) => {
-                    if (child.isMesh) {
-                        if (isXrayMode) {
-                            originalMaterials.set(child, child.material);
-                            child.material = new THREE.MeshBasicMaterial({
-                                color: 0xaaaaaa,
-                                wireframe: true,
-                                transparent: true,
-                                opacity: 0.5
-                            });
-                        } else {
-                            child.material = originalMaterials.get(child);
-                        }
+            try {
+                if (currentModel.isMesh) {
+                    if (isXrayMode) {
+                        originalMaterials.set(currentModel, currentModel.material);
+                        currentModel.material = new THREE.MeshBasicMaterial({
+                            color: 0xaaaaaa,
+                            wireframe: true,
+                            transparent: true,
+                            opacity: 0.5
+                        });
+                    } else {
+                        currentModel.material = originalMaterials.get(currentModel) || new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
                     }
-                });
+                } else {
+                    currentModel.traverse((child) => {
+                        if (child.isMesh) {
+                            if (isXrayMode) {
+                                originalMaterials.set(child, child.material);
+                                child.material = new THREE.MeshBasicMaterial({
+                                    color: 0xaaaaaa,
+                                    wireframe: true,
+                                    transparent: true,
+                                    opacity: 0.5
+                                });
+                            } else {
+                                child.material = originalMaterials.get(child) || new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                console.error('X-Ray mode error:', err);
             }
         });
 
-        // Trigger file input
-        uploadButton.addEventListener('click', () => {
-            console.log('Upload button clicked at', new Date().toISOString());
-            fileInput.value = '';
+        // Toggle Analysis mode
+        analysisButton.addEventListener('click', () => {
+            console.log('Analysis button clicked at', new Date().toISOString());
+            if (!currentModel) return;
+            isAnalysisMode = !isAnalysisMode;
+            analysisButton.textContent = isAnalysisMode ? 'Exit Analysis' : 'Analysis';
+            analysisPanel.style.display = isAnalysisMode ? 'block' : 'none';
+            if (!isAnalysisMode) {
+                try {
+                    resetMeasurement();
+                    resetCrossSection();
+                    analysisResults.innerHTML = '';
+                    if (currentModel.isMesh) {
+                        currentModel.material = originalMaterials.get(currentModel) || new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                    } else {
+                        currentModel.traverse((child) => {
+                            if (child.isMesh) {
+                                child.material = originalMaterials.get(child) || new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error('Analysis mode reset error:', err);
+                }
+            }
+        });
+
+        // Wall Thickness Analysis
+        wallThicknessButton.addEventListener('click', () => {
+            console.log('Wall Thickness button clicked at', new Date().toISOString());
+            if (!currentModel) return;
+            analysisResults.innerHTML = 'Calculating wall thickness...';
+
             try {
-                fileInput.click();
-                console.log('File picker opened successfully');
+                let minThickness = Infinity;
+                let maxThickness = 0;
+                let totalThickness = 0;
+                let count = 0;
+
+                const samplePoints = 30;
+                const box = new THREE.Box3().setFromObject(currentModel);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+
+                if (currentModel.isMesh) {
+                    currentModel.material = new THREE.MeshPhongMaterial({
+                        color: 0xaaaaaa,
+                        clippingPlanes: []
+                    });
+                    originalMaterials.set(currentModel, currentModel.material);
+                } else {
+                    currentModel.traverse((child) => {
+                        if (child.isMesh) {
+                            child.material = new THREE.MeshPhongMaterial({
+                                color: 0xaaaaaa,
+                                clippingPlanes: []
+                            });
+                            originalMaterials.set(child, child.material);
+                        }
+                    });
+                }
+
+                for (let i = 0; i < samplePoints; i++) {
+                    const point = new THREE.Vector3(
+                        center.x + (Math.random() - 0.5) * size.x,
+                        center.y + (Math.random() - 0.5) * size.y,
+                        center.z + (Math.random() - 0.5) * size.z
+                    );
+                    const direction = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+                    const thickness = calculateThickness(point, direction);
+                    if (thickness !== null && isFinite(thickness)) {
+                        minThickness = Math.min(minThickness, thickness);
+                        maxThickness = Math.max(maxThickness, thickness);
+                        totalThickness += thickness;
+                        count++;
+                    }
+                }
+
+                const avgThickness = count > 0 ? totalThickness / count : 0;
+                analysisResults.innerHTML = count > 0 ? `
+                    <p>Min Thickness: ${minThickness.toFixed(2)} mm</p>
+                    <p>Max Thickness: ${maxThickness.toFixed(2)} mm</p>
+                    <p>Avg Thickness: ${avgThickness.toFixed(2)} mm</p>
+                ` : '<p>No valid thickness measurements found.</p>';
             } catch (err) {
-                console.error('File input click error:', err);
-                showError('Failed to open file picker. Please try again or use a different browser.');
+                console.error('Wall thickness error:', err);
+                analysisResults.innerHTML = '<p>Error calculating thickness.</p>';
+            }
+        });
+
+        function calculateThickness(point, direction) {
+            try {
+                raycaster.set(point, direction);
+                const intersects = raycaster.intersectObject(currentModel, true);
+                if (intersects.length >= 2) {
+                    return intersects[0].point.distanceTo(intersects[1].point);
+                }
+                return null;
+            } catch (err) {
+                console.error('Thickness calculation error:', err);
+                return null;
+            }
+        }
+
+        // Point-to-Point Measurement
+        measurementButton.addEventListener('click', () => {
+            console.log('Measurement button clicked at', new Date().toISOString());
+            if (!currentModel) return;
+            isMeasuring = !isMeasuring;
+            measurementButton.textContent = isMeasuring ? 'Stop Measuring' : 'Point-to-Point Measurement';
+            analysisResults.innerHTML = isMeasuring ? 'Click two points on the model to measure distance.' : '';
+            if (!isMeasuring) {
+                resetMeasurement();
+            }
+        });
+
+        function resetMeasurement() {
+            try {
+                if (measurementLine) {
+                    scene.remove(measurementLine);
+                    measurementLine = null;
+                }
+                if (measurementLabel) {
+                    scene.remove(measurementLabel);
+                    measurementLabel = null;
+                }
+                measurementMarkers.forEach(marker => scene.remove(marker));
+                measurementMarkers = [];
+                measurementPoints = [];
+                isMeasuring = false;
+                measurementButton.textContent = 'Point-to-Point Measurement';
+                console.log('Measurement reset at', new Date().toISOString());
+            } catch (err) {
+                console.error('Measurement reset error:', err);
+            }
+        }
+
+        // Cross-Section View
+        crossSectionButton.addEventListener('click', () => {
+            console.log('Cross-Section button clicked at', new Date().toISOString());
+            if (!currentModel) return;
+            isCrossSectionActive = !isCrossSectionActive;
+            crossSectionControls.style.display = isCrossSectionActive ? 'block' : 'none';
+            if (!isCrossSectionActive) {
+                resetCrossSection();
+            } else {
+                createCoordinateAxes();
+                updateClippingPlane();
+            }
+        });
+
+        xAxisButton.addEventListener('click', () => {
+            try {
+                currentAxis = 'x';
+                rotationAngle = 0;
+                rotation.value = 0;
+                rotationValue.textContent = '0';
+                updateClippingPlane();
+                console.log('X-Axis selected at', new Date().toISOString());
+            } catch (err) {
+                console.error('X-Axis button error:', err);
+            }
+        });
+
+        yAxisButton.addEventListener('click', () => {
+            try {
+                currentAxis = 'y';
+                rotationAngle = 0;
+                rotation.value = 0;
+                rotationValue.textContent = '0';
+                updateClippingPlane();
+                console.log('Y-Axis selected at', new Date().toISOString());
+            } catch (err) {
+                console.error('Y-Axis button error:', err);
+            }
+        });
+
+        zAxisButton.addEventListener('click', () => {
+            try {
+                currentAxis = 'z';
+                rotationAngle = 0;
+                rotation.value = 0;
+                rotationValue.textContent = '0';
+                updateClippingPlane();
+                console.log('Z-Axis selected at', new Date().toISOString());
+            } catch (err) {
+                console.error('Z-Axis button error:', err);
+            }
+        });
+
+        rotation.addEventListener('input', () => {
+            try {
+                rotationAngle = parseFloat(rotation.value);
+                rotationValue.textContent = rotationAngle.toFixed(0);
+                updateClippingPlane();
+                console.log('Rotation slider updated to', rotationAngle, 'at', new Date().toISOString());
+            } catch (err) {
+                console.error('Rotation slider error:', err);
+            }
+        });
+
+        function updateClippingPlane() {
+            try {
+                if (!currentModel || !isCrossSectionActive) return;
+
+                // Compute normal vector based on selected axis and rotation
+                const quaternion = new THREE.Quaternion();
+                const axisVector = new THREE.Vector3(
+                    currentAxis === 'x' ? 1 : 0,
+                    currentAxis === 'y' ? 1 : 0,
+                    currentAxis === 'z' ? 1 : 0
+                );
+                quaternion.setFromAxisAngle(axisVector, rotationAngle * Math.PI / 180);
+                const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(quaternion).normalize();
+                const plane = new THREE.Plane(normal, 0);
+                clippingPlanes = [plane];
+
+                // Update model materials
+                if (currentModel.isMesh) {
+                    if (!currentModel.material) {
+                        currentModel.material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                    }
+                    currentModel.material.clippingPlanes = clippingPlanes;
+                    currentModel.material.clipShadows = true;
+                } else {
+                    currentModel.traverse((child) => {
+                        if (child.isMesh) {
+                            if (!child.material) {
+                                child.material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                            }
+                            child.material.clippingPlanes = clippingPlanes;
+                            child.material.clipShadows = true;
+                        }
+                    });
+                }
+                renderer.clippingPlanes = clippingPlanes;
+
+                // Visualize clipping plane
+                if (planeMesh) {
+                    scene.remove(planeMesh);
+                }
+                const planeGeometry = new THREE.PlaneGeometry(100, 100);
+                const planeMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+                planeMesh.quaternion.copy(quaternion);
+                scene.add(planeMesh);
+
+                // Update coordinate axes orientation
+                if (coordinateAxes) {
+                    coordinateAxes.quaternion.copy(quaternion);
+                }
+                console.log('Clipping plane updated for axis', currentAxis, 'angle', rotationAngle, 'at', new Date().toISOString());
+            } catch (err) {
+                console.error('Clipping plane error:', err);
+            }
+        }
+
+        function resetCrossSection() {
+            try {
+                clippingPlanes = [];
+                if (currentModel) {
+                    if (currentModel.isMesh) {
+                        if (currentModel.material) {
+                            currentModel.material.clippingPlanes = clippingPlanes;
+                        }
+                    } else {
+                        currentModel.traverse((child) => {
+                            if (child.isMesh && child.material) {
+                                child.material.clippingPlanes = clippingPlanes;
+                            }
+                        });
+                    }
+                }
+                renderer.clippingPlanes = clippingPlanes;
+                if (planeMesh) {
+                    scene.remove(planeMesh);
+                    planeMesh = null;
+                }
+                if (coordinateAxes) {
+                    scene.remove(coordinateAxes);
+                    coordinateAxes = null;
+                }
+                isCrossSectionActive = false;
+                console.log('Cross-section reset at', new Date().toISOString());
+            } catch (err) {
+                console.error('Cross-section reset error:', err);
+            }
+        }
+
+        // Mouse drag for plane rotation
+        renderer.domElement.addEventListener('mousedown', (event) => {
+            if (!currentModel || !isCrossSectionActive || isMeasuring) return;
+            isDragging = true;
+            lastMouseX = event.clientX;
+            controls.enabled = false; // Disable OrbitControls during drag
+            console.log('Mouse down for drag rotation at', new Date().toISOString());
+        });
+
+        renderer.domElement.addEventListener('mousemove', (event) => {
+            if (!isDragging) return;
+            try {
+                const deltaX = event.clientX - lastMouseX;
+                const angleChange = deltaX * 0.5; // Sensitivity: 0.5 degrees per pixel
+                rotationAngle = (rotationAngle + angleChange) % 360;
+                if (rotationAngle < 0) rotationAngle += 360;
+                rotation.value = rotationAngle;
+                rotationValue.textContent = rotationAngle.toFixed(0);
+                updateClippingPlane();
+                lastMouseX = event.clientX;
+            } catch (err) {
+                console.error('Drag rotation error:', err);
+            }
+        });
+
+        renderer.domElement.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                controls.enabled = true; // Re-enable OrbitControls
+                console.log('Mouse up, drag rotation ended at', new Date().toISOString());
+            }
+        });
+
+        // Mouse click for measurement
+        renderer.domElement.addEventListener('click', (event) => {
+            if (!isMeasuring || !currentModel) return;
+
+            try {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(currentModel, true);
+
+                if (intersects.length > 0) {
+                    const point = intersects[0].point;
+                    measurementPoints.push(point);
+
+                    // Add green sphere marker
+                    const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                    const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                    const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+                    marker.position.copy(point);
+                    scene.add(marker);
+                    measurementMarkers.push(marker);
+                    console.log('Measurement point added at', point, 'at', new Date().toISOString());
+
+                    if (measurementPoints.length === 2) {
+                        const distance = measurementPoints[0].distanceTo(measurementPoints[1]);
+                        analysisResults.innerHTML = `Distance: ${distance.toFixed(2)} mm`;
+
+                        if (measurementLine) {
+                            scene.remove(measurementLine);
+                        }
+                        const geometry = new THREE.BufferGeometry().setFromPoints(measurementPoints);
+                        const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+                        measurementLine = new THREE.Line(geometry, material);
+                        scene.add(measurementLine);
+
+                        if (measurementLabel) {
+                            scene.remove(measurementLabel);
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 128;
+                        canvas.height = 32;
+                        const context = canvas.getContext('2d');
+                        context.font = '24px Arial';
+                        context.fillStyle = 'white';
+                        context.fillText(`${distance.toFixed(2)} mm`, 0, 24);
+                        const texture = new THREE.CanvasTexture(canvas);
+                        const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                        measurementLabel = new THREE.Sprite(spriteMaterial);
+                        measurementLabel.position.copy(measurementPoints[0].lerp(measurementPoints[1], 0.5));
+                        measurementLabel.scale.set(10, 5, 1);
+                        scene.add(measurementLabel);
+
+                        measurementPoints = [];
+                        isMeasuring = false;
+                        measurementButton.textContent = 'Point-to-Point Measurement';
+                        console.log('Measurement completed, distance:', distance.toFixed(2), 'mm at', new Date().toISOString());
+                    }
+                } else {
+                    console.log('No intersection found for measurement click at', new Date().toISOString());
+                }
+            } catch (err) {
+                console.error('Measurement click error:', err);
+                analysisResults.innerHTML = '<p>Error measuring distance.</p>';
             }
         });
 
@@ -258,15 +792,19 @@
 
             loadingMessage.style.display = 'block';
             errorMessage.style.display = 'none';
-            uploadButton.style.display = 'none';
+            fileInput.style.display = 'none';
             infoPanel.style.display = 'none';
             xrayButton.style.display = 'none';
+            analysisButton.style.display = 'none';
+            analysisPanel.style.display = 'none';
 
             if (currentModel) {
                 scene.remove(currentModel);
                 currentModel = null;
                 originalMaterials.clear();
             }
+            resetMeasurement();
+            resetCrossSection();
 
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -276,7 +814,10 @@
                     if (extension === 'stl') {
                         const loader = new THREE.STLLoader();
                         const geometry = loader.parse(e.target.result);
-                        const material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                        const material = new THREE.MeshPhongMaterial({
+                            color: 0xaaaaaa,
+                            clippingPlanes: []
+                        });
                         const mesh = new THREE.Mesh(geometry, material);
                         scene.add(mesh);
                         currentModel = mesh;
@@ -293,37 +834,59 @@
                         // Focus camera
                         focusCameraOnModel(mesh);
 
-                        // Update info panel (metric units)
+                        // Update info panel
                         const volume = calculateVolume(geometry) * (scale * scale * scale) / 1000; // mm³ to cm³
                         fileNameDisplay.textContent = `File: ${file.name}`;
                         volumeDisplay.textContent = `Volume: ${volume.toFixed(2)} cm³`;
                         dimensionsDisplay.textContent = `Dimensions: X: ${size.x.toFixed(2)} mm, Y: ${size.y.toFixed(2)} mm, Z: ${size.z.toFixed(2)} mm`;
                         infoPanel.style.display = 'block';
                         xrayButton.style.display = 'block';
+                        analysisButton.style.display = 'block';
+
+                        // Store original material
+                        originalMaterials.set(mesh, material);
+                        console.log('STL model loaded:', file.name, 'at', new Date().toISOString());
                     } else if (extension === 'step' || extension === 'stp') {
                         const loader = new THREE.STEPLoader();
                         loader.loadFromString(e.target.result, (object) => {
-                            scene.add(object);
-                            currentModel = object;
+                            try {
+                                scene.add(object);
+                                currentModel = object;
 
-                            // Center and scale model
-                            const box = new THREE.Box3().setFromObject(object);
-                            const center = box.getCenter(new THREE.Vector3());
-                            const size = box.getSize(new THREE.Vector3());
-                            object.position.sub(center);
-                            const maxDim = Math.max(size.x, size.y, size.z);
-                            const scale = 50 / maxDim;
-                            object.scale.set(scale, scale, scale);
+                                // Center and scale model
+                                const box = new THREE.Box3().setFromObject(object);
+                                const center = box.getCenter(new THREE.Vector3());
+                                const size = box.getSize(new THREE.Vector3());
+                                object.position.sub(center);
+                                const maxDim = Math.max(size.x, size.y, size.z);
+                                const scale = 50 / maxDim;
+                                object.scale.set(scale, scale, scale);
 
-                            // Focus camera
-                            focusCameraOnModel(object);
+                                // Focus camera
+                                focusCameraOnModel(object);
 
-                            // Update info panel (no volume for STEP)
-                            fileNameDisplay.textContent = `File: ${file.name}`;
-                            volumeDisplay.textContent = `Volume: (Not calculated for STEP)`;
-                            dimensionsDisplay.textContent = `Dimensions: X: ${size.x.toFixed(2)} mm, Y: ${size.y.toFixed(2)} mm, Z: ${size.z.toFixed(2)} mm`;
-                            infoPanel.style.display = 'block';
-                            xrayButton.style.display = 'block';
+                                // Update info panel
+                                fileNameDisplay.textContent = `File: ${file.name}`;
+                                volumeDisplay.textContent = `Volume: (Not calculated for STEP)`;
+                                dimensionsDisplay.textContent = `Dimensions: X: ${size.x.toFixed(2)} mm, Y: ${size.y.toFixed(2)} mm, Z: ${size.z.toFixed(2)} mm`;
+                                infoPanel.style.display = 'block';
+                                xrayButton.style.display = 'block';
+                                analysisButton.style.display = 'block';
+
+                                // Store original materials
+                                object.traverse((child) => {
+                                    if (child.isMesh) {
+                                        if (!child.material) {
+                                            child.material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+                                        }
+                                        child.material.clippingPlanes = [];
+                                        originalMaterials.set(child, child.material);
+                                    }
+                                });
+                                console.log('STEP model loaded:', file.name, 'at', new Date().toISOString());
+                            } catch (err) {
+                                throw new Error('Error processing STEP object: ' + err.message);
+                            }
                         }, (error) => {
                             loadingMessage.style.display = 'none';
                             showError('Error loading STEP file. Please ensure the file is valid.');
@@ -355,8 +918,9 @@
         function showError(message) {
             errorMessage.textContent = message;
             errorMessage.style.display = 'block';
-            uploadButton.style.display = 'block';
+            fileInput.style.display = 'block';
             loadingMessage.style.display = 'none';
+            console.log('Error displayed:', message, 'at', new Date().toISOString());
         }
 
         // Animation loop
@@ -369,18 +933,15 @@
 
         // Handle window resize
         window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            try {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                console.log('Window resized at', new Date().toISOString());
+            } catch (err) {
+                console.error('Resize error:', err);
+            }
         });
-
-        // Fallback for background image loading failure
-        const bgImage = new Image();
-        bgImage.src = 'https://images.unsplash.com/photo-1570288676578-1f1d3f8a1e2f?fit=crop&w=1920&h=1080';
-        bgImage.onerror = () => {
-            document.body.style.background = 'black';
-            console.warn('Background image failed to load, falling back to black');
-        };
     </script>
 </body>
 </html>
