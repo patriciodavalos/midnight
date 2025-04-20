@@ -224,10 +224,11 @@
         let isAnalysisMode = false;
         let isMeasuring = false;
         let isCrossSectionActive = false;
-        let measurementPoints = [];
-        let measurementLine = null;
-        let measurementLabel = null;
+        let measurementPointPairs = [];
+        let measurementLines = [];
+        let measurementLabels = [];
         let measurementMarkers = [];
+        let cursorMarker = null;
         const originalMaterials = new Map();
         let clippingPlanes = [];
         let planeMesh = null;
@@ -280,7 +281,7 @@
             }
         }
 
-        // Function to create coordinate axes
+        // Function to create coordinate axes with circular paths
         function createCoordinateAxes() {
             try {
                 if (coordinateAxes) {
@@ -325,8 +326,57 @@
                 );
                 coordinateAxes.add(zArrow);
 
+                // Create circular paths around each axis
+                const circleRadius = 15; // Slightly smaller than arrow length
+                const segments = 64;
+
+                // Circle around X-axis (red, in YZ plane)
+                let ellipseCurve = new THREE.EllipseCurve(
+                    0, 0, // Center
+                    circleRadius, circleRadius, // Radius X, Radius Y
+                    0, 2 * Math.PI, // Start and end angle
+                    false, // Clockwise
+                    0 // Rotation
+                );
+                let points = ellipseCurve.getPoints(segments);
+                let geometry = new THREE.BufferGeometry().setFromPoints(points);
+                let material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+                let circleX = new THREE.Line(geometry, material);
+                circleX.rotation.x = Math.PI / 2; // Rotate to lie in YZ plane
+                coordinateAxes.add(circleX);
+
+                // Circle around Y-axis (green, in XZ plane)
+                ellipseCurve = new THREE.EllipseCurve(
+                    0, 0,
+                    circleRadius, circleRadius,
+                    0, 2 * Math.PI,
+                    false,
+                    0
+                );
+                points = ellipseCurve.getPoints(segments);
+                geometry = new THREE.BufferGeometry().setFromPoints(points);
+                material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+                let circleY = new THREE.Line(geometry, material);
+                circleY.rotation.y = Math.PI / 2; // Rotate to lie in XZ plane
+                coordinateAxes.add(circleY);
+
+                // Circle around Z-axis (blue, in XY plane)
+                ellipseCurve = new THREE.EllipseCurve(
+                    0, 0,
+                    circleRadius, circleRadius,
+                    0, 2 * Math.PI,
+                    false,
+                    0
+                );
+                points = ellipseCurve.getPoints(segments);
+                geometry = new THREE.BufferGeometry().setFromPoints(points);
+                material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+                let circleZ = new THREE.Line(geometry, material);
+                // Already in XY plane, no rotation needed
+                coordinateAxes.add(circleZ);
+
                 scene.add(coordinateAxes);
-                console.log('Coordinate axes created at', new Date().toISOString());
+                console.log('Coordinate axes with circles created at', new Date().toISOString());
             } catch (err) {
                 console.error('Create coordinate axes error:', err);
             }
@@ -487,24 +537,32 @@
             analysisResults.innerHTML = isMeasuring ? 'Click two points on the model to measure distance.' : '';
             if (!isMeasuring) {
                 resetMeasurement();
+            } else {
+                // Initialize cursor marker
+                const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                cursorMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+                cursorMarker.visible = false;
+                scene.add(cursorMarker);
             }
         });
 
         function resetMeasurement() {
             try {
-                if (measurementLine) {
-                    scene.remove(measurementLine);
-                    measurementLine = null;
-                }
-                if (measurementLabel) {
-                    scene.remove(measurementLabel);
-                    measurementLabel = null;
-                }
+                measurementLines.forEach(line => scene.remove(line));
+                measurementLabels.forEach(label => scene.remove(label));
                 measurementMarkers.forEach(marker => scene.remove(marker));
+                if (cursorMarker) {
+                    scene.remove(cursorMarker);
+                    cursorMarker = null;
+                }
+                measurementPointPairs = [];
+                measurementLines = [];
+                measurementLabels = [];
                 measurementMarkers = [];
-                measurementPoints = [];
                 isMeasuring = false;
                 measurementButton.textContent = 'Point-to-Point Measurement';
+                analysisResults.innerHTML = '';
                 console.log('Measurement reset at', new Date().toISOString());
             } catch (err) {
                 console.error('Measurement reset error:', err);
@@ -517,6 +575,8 @@
             if (!currentModel) return;
             isCrossSectionActive = !isCrossSectionActive;
             crossSectionControls.style.display = isCrossSectionActive ? 'block' : 'none';
+            controls.enabled = !isCrossSectionActive; // Disable OrbitControls in cross-section mode
+            console.log('OrbitControls', controls.enabled ? 'enabled' : 'disabled', 'at', new Date().toISOString());
             if (!isCrossSectionActive) {
                 resetCrossSection();
             } else {
@@ -605,7 +665,7 @@
                                 child.material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
                             }
                             child.material.clippingPlanes = clippingPlanes;
-                            child.material.clipShadows = true;
+                            currentModel.material.clipShadows = true;
                         }
                     });
                 }
@@ -617,13 +677,17 @@
                 }
                 const planeGeometry = new THREE.PlaneGeometry(100, 100);
                 const planeMaterial = new THREE.MeshBasicMaterial({
-                    color: 0xFFFF99, // Light yellow
+                    color: 0x808080, // Medium gray
                     side: THREE.DoubleSide,
                     transparent: true,
-                    opacity: 0.3
+                    opacity: 0.3,
+                    depthTest: false // Disable depth test to prevent flickering
                 });
                 planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
                 planeMesh.quaternion.copy(quaternion);
+                // Offset the plane slightly along its normal to avoid z-fighting
+                const offset = 0.1;
+                planeMesh.position.copy(normal.multiplyScalar(offset));
                 scene.add(planeMesh);
 
                 // Update coordinate axes orientation
@@ -673,30 +737,46 @@
             if (!currentModel || !isCrossSectionActive || isMeasuring) return;
             isDragging = true;
             lastMouseX = event.clientX;
-            controls.enabled = false; // Disable OrbitControls during drag
             console.log('Mouse down for drag rotation at', new Date().toISOString());
         });
 
         renderer.domElement.addEventListener('mousemove', (event) => {
-            if (!isDragging) return;
-            try {
-                const deltaX = event.clientX - lastMouseX;
-                const angleChange = deltaX * 0.5; // Sensitivity: 0.5 degrees per pixel
-                rotationAngle = (rotationAngle + angleChange) % 360;
-                if (rotationAngle < 0) rotationAngle += 360;
-                rotation.value = rotationAngle;
-                rotationValue.textContent = rotationAngle.toFixed(0);
-                updateClippingPlane();
-                lastMouseX = event.clientX;
-            } catch (err) {
-                console.error('Drag rotation error:', err);
+            if (isDragging) {
+                try {
+                    const deltaX = event.clientX - lastMouseX;
+                    const angleChange = deltaX * 0.5; // Sensitivity: 0.5 degrees per pixel
+                    rotationAngle = (rotationAngle + angleChange) % 360;
+                    if (rotationAngle < 0) rotationAngle += 360;
+                    rotation.value = rotationAngle;
+                    rotationValue.textContent = rotationAngle.toFixed(0);
+                    updateClippingPlane();
+                    lastMouseX = event.clientX;
+                } catch (err) {
+                    console.error('Drag rotation error:', err);
+                }
+            } else if (isMeasuring && currentModel) {
+                // Update cursor marker position
+                try {
+                    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                    raycaster.setFromCamera(mouse, camera);
+                    const intersects = raycaster.intersectObject(currentModel, true);
+
+                    if (intersects.length > 0 && cursorMarker) {
+                        cursorMarker.position.copy(intersects[0].point);
+                        cursorMarker.visible = true;
+                    } else if (cursorMarker) {
+                        cursorMarker.visible = false;
+                    }
+                } catch (err) {
+                    console.error('Cursor marker update error:', err);
+                }
             }
         });
 
         renderer.domElement.addEventListener('mouseup', () => {
             if (isDragging) {
                 isDragging = false;
-                controls.enabled = true; // Re-enable OrbitControls
                 console.log('Mouse up, drag rotation ended at', new Date().toISOString());
             }
         });
@@ -714,7 +794,11 @@
 
                 if (intersects.length > 0) {
                     const point = intersects[0].point;
-                    measurementPoints.push(point);
+                    const currentPair = measurementPointPairs[measurementPointPairs.length - 1] || [];
+                    currentPair.push(point);
+                    if (currentPair.length === 1) {
+                        measurementPointPairs.push(currentPair);
+                    }
 
                     // Add green sphere marker
                     const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
@@ -725,21 +809,20 @@
                     measurementMarkers.push(marker);
                     console.log('Measurement point added at', point, 'at', new Date().toISOString());
 
-                    if (measurementPoints.length === 2) {
-                        const distance = measurementPoints[0].distanceTo(measurementPoints[1]);
-                        analysisResults.innerHTML = `Distance: ${distance.toFixed(2)} mm`;
+                    if (currentPair.length === 2) {
+                        const distance = currentPair[0].distanceTo(currentPair[1]);
+                        // Append new distance to analysisResults
+                        const existingResults = analysisResults.innerHTML;
+                        analysisResults.innerHTML = existingResults + `<p>Distance ${measurementPointPairs.length}: ${distance.toFixed(2)} mm</p>`;
 
-                        if (measurementLine) {
-                            scene.remove(measurementLine);
-                        }
-                        const geometry = new THREE.BufferGeometry().setFromPoints(measurementPoints);
+                        // Create red line
+                        const geometry = new THREE.BufferGeometry().setFromPoints(currentPair);
                         const material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-                        measurementLine = new THREE.Line(geometry, material);
-                        scene.add(measurementLine);
+                        const line = new THREE.Line(geometry, material);
+                        scene.add(line);
+                        measurementLines.push(line);
 
-                        if (measurementLabel) {
-                            scene.remove(measurementLabel);
-                        }
+                        // Create distance label
                         const canvas = document.createElement('canvas');
                         canvas.width = 128;
                         canvas.height = 32;
@@ -749,22 +832,22 @@
                         context.fillText(`${distance.toFixed(2)} mm`, 0, 24);
                         const texture = new THREE.CanvasTexture(canvas);
                         const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-                        measurementLabel = new THREE.Sprite(spriteMaterial);
-                        measurementLabel.position.copy(measurementPoints[0].lerp(measurementPoints[1], 0.5));
-                        measurementLabel.scale.set(10, 5, 1);
-                        scene.add(measurementLabel);
+                        const label = new THREE.Sprite(spriteMaterial);
+                        label.position.copy(currentPair[0].lerp(currentPair[1], 0.5));
+                        label.scale.set(10, 5, 1);
+                        scene.add(label);
+                        measurementLabels.push(label);
 
-                        measurementPoints = [];
-                        isMeasuring = false;
-                        measurementButton.textContent = 'Point-to-Point Measurement';
-                        console.log('Measurement completed, distance:', distance.toFixed(2), 'mm at', new Date().toISOString());
+                        // Start a new pair
+                        measurementPointPairs.push([]);
+                        console.log('Measurement completed, distance:', distance.toFixed(2), 'mm, pair:', measurementPointPairs.length, 'at', new Date().toISOString());
                     }
                 } else {
                     console.log('No intersection found for measurement click at', new Date().toISOString());
                 }
             } catch (err) {
                 console.error('Measurement click error:', err);
-                analysisResults.innerHTML = '<p>Error measuring distance.</p>';
+                analysisResults.innerHTML += '<p>Error measuring distance.</p>';
             }
         });
 
