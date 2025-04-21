@@ -114,7 +114,7 @@
         #analysisPanel {
             position: absolute;
             top: 50px;
-            right: 230px; /* Moved to right to avoid overlap with materialPanel */
+            right: 230px;
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 10px;
@@ -146,7 +146,7 @@
         #materialPanel {
             position: absolute;
             top: 50px;
-            left: 10px; /* Moved to left side */
+            left: 10px;
             background: rgba(0, 0, 0, 0.8);
             color: white;
             padding: 10px;
@@ -390,7 +390,7 @@
             'asa': 0.6,
             'pa12-cf': 0.8,
             'tpu': 0.7,
-            '9600-resin': 0.04286, // Updated based on examples
+            '9600-resin': 0.04286,
             'black-resin': 1.1,
             'imagine-black': 1.2,
             '8228-resin': 1.0,
@@ -485,7 +485,7 @@
             const surfaceTreatment = surfaceTreatmentSelect.value;
             const materialCost = materialPricing[selectedMaterial] || 0;
             const surfaceCost = surfaceFinish ? (surfaceTreatment === 'general-sanding' ? 0.2 : 0.3) : 0;
-            const totalPrice = (materialCost * modelVolume * 1.82 + surfaceCost) * quantity;
+            const totalPrice = (materialCost * modelVolume * 2.366 + surfaceCost * 1.3) * quantity;
             priceDisplay.textContent = modelVolume > 0 ? `$${totalPrice.toFixed(2)} USD` : '$0.00 USD';
         }
 
@@ -706,7 +706,7 @@
 
                 modelVolume = calculateVolume(geometry) * (scale * scale * scale) / 1000; // cm³
                 fileNameDisplay.textContent = `File: ${file.name}`;
-                volumeDisplay.textContent = `Volume: ${modelVolume.toFixed(2)} g`;
+                volumeDisplay.textContent = `Volume: ${(modelVolume * 1000).toFixed(2)} mm³`;
                 dimensionsDisplay.textContent = `Dimensions: X: ${(size.x * scale).toFixed(2)} mm, Y: ${(size.y * scale).toFixed(2)} mm, Z: ${(size.z * scale).toFixed(2)} mm`;
                 infoPanel.style.display = 'block';
                 xrayButton.style.display = 'block';
