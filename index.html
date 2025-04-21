@@ -1,68 +1,1015 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>3D Viewer - STL and STEP</title>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/examples/js/loaders/STLLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three-cad-viewer@1.5.1/dist/three-cad-viewer.min.js"></script>
-  <style>
-    body { margin: 0; font-family: sans-serif; text-align: center; background: #f0f0f0; }
-    canvas { display: block; }
-    #viewer-container { width: 100%; height: 80vh; background: white; }
-    input { margin: 10px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Model Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #uploadButton {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #f28c38;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            z-index: 1000; /* Increased to ensure clickability */
+            pointer-events: auto;
+            text-align: center;
+        }
+        #uploadButton:hover {
+            background-color: #e07b30;
+        }
+        #guidelinesMessage {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            z-index: 10;
+            text-align: center;
+            width: 80%;
+            max-width: 400px;
+            line-height: 1.5;
+        }
+        #errorMessage {
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: red;
+            font-size: 16px;
+            z-index: 10;
+            display: none;
+            text-align: center;
+        }
+        #loadingMessage {
+            position: absolute;
+            top: 55%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 16px;
+            z-index: 10;
+            display: none;
+        }
+        #infoPanel {
+            position: absolute;
+            bottom: 50px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 10;
+            display: none;
+        }
+        #xrayButton, #analysisButton {
+            position: absolute;
+            top: 10px;
+            background-color: #f28c38;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            z-index: 10;
+        }
+        #xrayButton {
+            left: calc(50% - 110px);
+            transform: translateX(-50%);
+        }
+        #analysisButton {
+            left: calc(50% + 10px);
+            transform: translateX(-50%);
+        }
+        #xrayButton:hover, #analysisButton:hover {
+            background-color: #e07b30;
+        }
+        #analysisPanel {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 10;
+            display: none;
+            width: 200px;
+        }
+        #analysisPanel button {
+            display: block;
+            width: 100%;
+            background-color: #f28c38;
+            color: white;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        #analysisPanel button:hover {
+            background-color: #e07b30;
+        }
+        #analysisPanel p {
+            margin: 5px 0;
+        }
+        #materialPanel {
+            position: absolute;
+            top: 50px;
+            right: 230px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            z-index: 10;
+            display: none;
+            width: 250px;
+        }
+        #materialPanel .section {
+            margin-bottom: 10px;
+        }
+        #materialPanel label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #materialPanel select, #materialPanel input[type="number"] {
+            width: 100%;
+            padding: 5px;
+            border-radius: 3px;
+            border: none;
+            background: #333;
+            color: white;
+        }
+        #materialPanel .material-btn {
+            margin: 3px;
+            padding: 5px 10px;
+            cursor: pointer;
+            background: #f28c38;
+            color: white;
+            border: none;
+            border-radius: 3px;
+        }
+        #materialPanel .material-btn:hover {
+            background: #e07b30;
+        }
+        #materialPanel .material-btn.selected {
+            background: #007bff;
+        }
+        #materialPanel .hidden {
+            display: none;
+        }
+        #materialPanel input[type="radio"] {
+            margin: 0 5px 0 10px;
+        }
+        #materialPanel #price {
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-  <h2>🧊 3D Viewer para STL y STEP</h2>
-  <input type="file" id="fileInput" accept=".stl,.step,.stp" />
-  <div id="viewer-container"></div>
+    <button id="uploadButton">Upload 3D File</button>
+    <div id="guidelinesMessage">Wall thickness>1.2mm, thinnest part≥0.8mm, hole size≥1.5mm. Supported files: STL</div>
+    <div id="errorMessage"></div>
+    <div id="loadingMessage">Loading file, please wait...</div>
+    <div id="infoPanel">
+        <div id="fileName"></div>
+        <div id="volume"></div>
+        <div id="dimensions"></div>
+    </div>
+    <button id="xrayButton">X-Ray Mode</button>
+    <button id="analysisButton">Analysis</button>
+    <div id="analysisPanel">
+        <button id="wallThicknessButton">Wall Thickness</button>
+        <button id="measurementButton">Point-to-Point Measurement</button>
+        <button id="crossSectionButton">Cross-Section View</button>
+        <div id="analysisResults"></div>
+    </div>
+    <div id="materialPanel">
+        <div class="section">
+            <label>Material Type:</label>
+            <select id="material-type">
+                <option value="fdm">FDM (Plastic)</option>
+                <option value="sla">SLA (Resin)</option>
+                <option value="mjf">MJF (Nylon)</option>
+                <option value="slm">SLM (Metal)</option>
+                <option value="sls">SLS (Nylon)</option>
+                <option value="wjp">WJP (Resin)</option>
+            </select>
+        </div>
+        <div class="section" id="material-options">
+            <label>Specific Material:</label><br>
+            <div id="fdm-materials">
+                <button class="material-btn" data-material="abs">ABS</button>
+                <button class="material-btn" data-material="pla">PLA</button>
+                <button class="material-btn" data-material="asa">ASA</button>
+                <button class="material-btn" data-material="pa12-cf">PA12-CF</button>
+                <button class="material-btn" data-material="tpu">TPU</button>
+            </div>
+            <div id="sla-materials" class="hidden">
+                <button class="material-btn" data-material="9600-resin">9600 Resin</button>
+                <button class="material-btn" data-material="black-resin">Black Resin</button>
+                <button class="material-btn" data-material="imagine-black">Imagine Black</button>
+                <button class="material-btn" data-material="8228-resin">8228 Resin</button>
+                <button class="material-btn" data-material="ledo-6060-resin">LEDO 6060 Resin</button>
+                <button class="material-btn" data-material="8001-resin">8001 Resin</button>
+                <button class="material-btn" data-material="cby-resin">CBY Resin</button>
+                <button class="material-btn" data-material="x-resin">X Resin</button>
+                <button class="material-btn" data-material="grey-resin">Grey Resin</button>
+            </div>
+            <div id="mjf-materials" class="hidden">
+                <button class="material-btn" data-material="pa12-hp">PA12-HP</button>
+                <button class="material-btn" data-material="pac-hp-nylon">PAC-HP Nylon</button>
+            </div>
+            <div id="slm-materials" class="hidden">
+                <button class="material-btn" data-material="316l">316L</button>
+                <button class="material-btn" data-material="stain-steel">Stain Steel</button>
+                <button class="material-btn" data-material="aluminium-6061">Aluminium 6061</button>
+                <button class="material-btn" data-material="titanium">Titanium</button>
+            </div>
+            <div id="sls-materials" class="hidden">
+                <button class="material-btn" data-material="3201pa-f-nylon">3201PA-F Nylon</button>
+                <button class="material-btn" data-material="1172pro-nylon">1172Pro Nylon</button>
+            </div>
+            <div id="wjp-materials" class="hidden">
+                <button class="material-btn" data-material="full-color-resin">Full Color Resin</button>
+            </div>
+        </div>
+        <div class="section">
+            <label>Color:</label>
+            <select id="color">
+                <option value="matte-white">Matte White</option>
+                <option value="black">Black</option>
+                <option value="grey">Grey</option>
+            </select>
+        </div>
+        <div class="section">
+            <label>Surface Finish:</label>
+            <input type="radio" name="surface" value="yes"> Yes
+            <input type="radio" name="surface" value="no" checked> No
+            <div id="surface-options" class="hidden">
+                <select id="surface-treatment">
+                    <option value="general-sanding">General Sanding</option>
+                    <option value="polishing">Polishing</option>
+                </select>
+            </div>
+        </div>
+        <div class="section">
+            <label>Quantity:</label>
+            <input type="number" id="quantity" value="1" min="1">
+        </div>
+        <div class="section">
+            <label>Estimated Price:</label>
+            <span id="price">$0.00</span>
+        </div>
+    </div>
 
-  <script>
-    const input = document.getElementById('fileInput');
-    const container = document.getElementById('viewer-container');
+    <!-- Three.js and dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/libs/dat.gui.min.js"></script>
 
-    input.addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
+    <script>
+        console.log('Page loaded, script running at', new Date().toISOString());
 
-      const ext = file.name.split('.').pop().toLowerCase();
-      container.innerHTML = ""; // clear previous
+        // Check browser support
+        if (!window.WebGLRenderingContext) {
+            showError('Your browser does not support WebGL. Please use a modern browser.', 'none');
+            throw new Error('WebGL not supported');
+        }
 
-      if (ext === 'stl') {
+        // Scene setup
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        renderer.localClippingEnabled = true;
 
-        const loader = new THREE.STLLoader();
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const geometry = loader.parse(e.target.result);
-          const material = new THREE.MeshNormalMaterial();
-          const mesh = new THREE.Mesh(geometry, material);
-          scene.add(mesh);
-          camera.position.z = 100;
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
 
-          const animate = function () {
-            requestAnimationFrame(animate);
-            mesh.rotation.y += 0.01;
-            renderer.render(scene, camera);
-          };
-          animate();
+        // Orbit controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // UI elements
+        const uploadButton = document.getElementById('uploadButton');
+        const guidelinesMessage = document.getElementById('guidelinesMessage');
+        const errorMessage = document.getElementById('errorMessage');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const infoPanel = document.getElementById('infoPanel');
+        const fileNameDisplay = document.getElementById('fileName');
+        const volumeDisplay = document.getElementById('volume');
+        const dimensionsDisplay = document.getElementById('dimensions');
+        const xrayButton = document.getElementById('xrayButton');
+        const analysisButton = document.getElementById('analysisButton');
+        const analysisPanel = document.getElementById('analysisPanel');
+        const wallThicknessButton = document.getElementById('wallThicknessButton');
+        const measurementButton = document.getElementById('measurementButton');
+        const crossSectionButton = document.getElementById('crossSectionButton');
+        const analysisResults = document.getElementById('analysisResults');
+        const materialPanel = document.getElementById('materialPanel');
+        const materialTypeSelect = document.getElementById('material-type');
+        const colorSelect = document.getElementById('color');
+        const quantityInput = document.getElementById('quantity');
+        const surfaceRadios = document.querySelectorAll('input[name="surface"]');
+        const surfaceOptions = document.getElementById('surface-options');
+        const surfaceTreatmentSelect = document.getElementById('surface-treatment');
+        const priceDisplay = document.getElementById('price');
+
+        // Create hidden file input
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.stl';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+        console.log('File input created with accept=".stl" at', new Date().toISOString());
+
+        let currentModel = null;
+        let isXrayMode = false;
+        let isAnalysisMode = false;
+        let isMeasuring = false;
+        let isCrossSectionActive = false;
+        let modelVolume = 0; // Volume in cm³ (grams)
+        let measurementPointPairs = [];
+        let measurementLines = [];
+        let measurementLabels = [];
+        let measurementMarkers = [];
+        let cursorMarker = null;
+        const originalMaterials = new Map();
+        let clippingPlanes = [];
+        let planeMesh = null;
+        let coordinateAxes = null;
+
+        // Raycaster for point selection
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        // Material pricing (cost per gram)
+        const materialPricing = {
+            'abs': 0.5, 'pla': 0.4, 'asa': 0.6, 'pa12-cf': 0.8, 'tpu': 0.7,
+            '9600-resin': 1.0, 'black-resin': 1.1, 'imagine-black': 1.2, '8228-resin': 1.0,
+            'ledo-6060-resin': 1.3, '8001-resin': 1.0, 'cby-resin': 1.1, 'x-resin': 1.2,
+            'grey-resin': 1.0, 'pa12-hp': 1.5, 'pac-hp-nylon': 1.6, '316l': 2.0,
+            'stain-steel': 2.1, 'aluminium-6061': 2.2, 'titanium': 2.5, '3201pa-f-nylon': 1.4,
+            '1172pro-nylon': 1.3, 'full-color-resin': 1.8
         };
-        reader.readAsArrayBuffer(file);
-      } else if (ext === 'step' || ext === 'stp') {
-        const viewer = new TCViewer.Viewer(container, {
-          backgroundColor: "#ffffff"
+        let selectedMaterial = 'abs';
+
+        // Initialize dat.GUI for cross-section controls
+        let gui = null;
+        let planeControls = null;
+        function setupCrossSectionControls() {
+            gui = new dat.GUI({ autoPlace: false });
+            gui.domElement.style.position = 'absolute';
+            gui.domElement.style.top = '50px';
+            gui.domElement.style.right = '500px';
+            document.body.appendChild(gui.domElement);
+
+            planeControls = {
+                normalX: 0,
+                normalY: 0,
+                normalZ: 1,
+                constant: 0
+            };
+
+            gui.add(planeControls, 'normalX', -1, 1).name('Normal X').onChange(updateClippingPlane);
+            gui.add(planeControls, 'normalY', -1, 1).name('Normal Y').onChange(updateClippingPlane);
+            gui.add(planeControls, 'normalZ', -1, 1).name('Normal Z').onChange(updateClippingPlane);
+            gui.add(planeControls, 'constant', -50, 50).name('Distance').onChange(updateClippingPlane);
+            gui.domElement.style.display = 'none';
+        }
+
+        // Material selection logic
+        function setupMaterialControls() {
+            materialTypeSelect.addEventListener('change', function() {
+                const materialType = this.value;
+                document.querySelectorAll('#material-options > div').forEach(div => {
+                    div.classList.add('hidden');
+                });
+                document.getElementById(`${materialType}-materials`).classList.remove('hidden');
+
+                const firstMaterialBtn = document.querySelector(`#${materialType}-materials .material-btn`);
+                if (firstMaterialBtn) {
+                    selectedMaterial = firstMaterialBtn.dataset.material;
+                    updateMaterialSelection(firstMaterialBtn);
+                }
+                updatePrice();
+            });
+
+            document.querySelectorAll('.material-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    selectedMaterial = this.dataset.material;
+                    updateMaterialSelection(this);
+                    updatePrice();
+                });
+            });
+
+            function updateMaterialSelection(selectedBtn) {
+                document.querySelectorAll('.material-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                selectedBtn.classList.add('selected');
+            }
+
+            surfaceRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    surfaceOptions.classList.toggle('hidden', this.value === 'no');
+                    updatePrice();
+                });
+            });
+
+            colorSelect.addEventListener('change', updatePrice);
+            quantityInput.addEventListener('input', updatePrice);
+            surfaceTreatmentSelect.addEventListener('change', updatePrice);
+        }
+
+        function updatePrice() {
+            const quantity = parseInt(quantityInput.value) || 1;
+            const surfaceFinish = document.querySelector('input[name="surface"]:checked').value === 'yes';
+            const surfaceTreatment = surfaceTreatmentSelect.value;
+            const materialCost = materialPricing[selectedMaterial] || 0;
+            const surfaceCost = surfaceFinish ? (surfaceTreatment === 'general-sanding' ? 0.2 : 0.3) : 0;
+            const totalPrice = (materialCost * modelVolume + surfaceCost) * quantity;
+            priceDisplay.textContent = modelVolume > 0 ? `$${totalPrice.toFixed(2)}` : 'Price unavailable (no volume)';
+        }
+
+        // Calculate volume of a mesh
+        function calculateVolume(geometry) {
+            let volume = 0;
+            try {
+                const positions = geometry.attributes.position.array;
+                for (let i = 0; i < positions.length; i += 9) {
+                    const v1 = new THREE.Vector3(positions[i], positions[i + 1], positions[i + 2]);
+                    const v2 = new THREE.Vector3(positions[i + 3], positions[i + 4], positions[i + 5]);
+                    const v3 = new THREE.Vector3(positions[i + 6], positions[i + 7], positions[i + 8]);
+                    volume += v1.clone().cross(v2).dot(v3) / 6.0;
+                }
+                return Math.abs(volume);
+            } catch (err) {
+                console.error('Volume calculation error:', err);
+                return 0;
+            }
+        }
+
+        // Focus camera on model
+        function focusCameraOnModel(model) {
+            try {
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                const maxDim = Math.max(size.x, size.y, size.z);
+
+                const fov = camera.fov * (Math.PI / 180);
+                const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5;
+
+                camera.position.set(center.x, center.y, center.z + distance);
+                camera.lookAt(center);
+
+                controls.target.copy(center);
+                controls.update();
+                console.log('Camera focused on model at', new Date().toISOString());
+            } catch (err) {
+                console.error('Camera focus error:', err);
+                throw err;
+            }
+        }
+
+        // Create coordinate axes with circular paths
+        function createCoordinateAxes() {
+            try {
+                if (coordinateAxes) {
+                    scene.remove(coordinateAxes);
+                }
+                coordinateAxes = new THREE.Group();
+
+                const arrowLength = 20;
+                const arrowHeadLength = 4;
+                const arrowHeadWidth = 2;
+
+                const xArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(1, 0, 0),
+                    new THREE.Vector3(0, 0, 0),
+                    arrowLength,
+                    0xff0000,
+                    arrowHeadLength,
+                    arrowHeadWidth
+                );
+                coordinateAxes.add(xArrow);
+
+                const yArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(0, 1, 0),
+                    new THREE.Vector3(0, 0, 0),
+                    arrowLength,
+                    0x00ff00,
+                    arrowHeadLength,
+                    arrowHeadWidth
+                );
+                coordinateAxes.add(yArrow);
+
+                const zArrow = new THREE.ArrowHelper(
+                    new THREE.Vector3(0, 0, 1),
+                    new THREE.Vector3(0, 0, 0),
+                    arrowLength,
+                    0x0000ff,
+                    arrowHeadLength,
+                    arrowHeadWidth
+                );
+                coordinateAxes.add(zArrow);
+
+                const circleRadius = 15;
+                const segments = 64;
+
+                let ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
+                let points = ellipseCurve.getPoints(segments);
+                let geometry = new THREE.BufferGeometry().setFromPoints(points);
+                let material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+                let circleX = new THREE.Line(geometry, material);
+                circleX.rotation.x = Math.PI / 2;
+                coordinateAxes.add(circleX);
+
+                ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
+                points = ellipseCurve.getPoints(segments);
+                geometry = new THREE.BufferGeometry().setFromPoints(points);
+                material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+                let circleY = new THREE.Line(geometry, material);
+                circleY.rotation.y = Math.PI / 2;
+                coordinateAxes.add(circleY);
+
+                ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
+                points = ellipseCurve.getPoints(segments);
+                geometry = new THREE.BufferGeometry().setFromPoints(points);
+                material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+                let circleZ = new THREE.Line(geometry, material);
+                coordinateAxes.add(circleZ);
+
+                scene.add(coordinateAxes);
+                console.log('Coordinate axes with circles created at', new Date().toISOString());
+            } catch (err) {
+                console.error('Create coordinate axes error:', err);
+            }
+        }
+
+        // Load and process STL file
+        async function loadStlFile(file) {
+            console.log('Loading STL file:', file.name, 'at', new Date().toISOString());
+            const reader = new FileReader();
+            return new Promise((resolve, reject) => {
+                reader.onload = (event) => {
+                    try {
+                        const loader = new THREE.STLLoader();
+                        const geometry = loader.parse(event.target.result);
+                        if (!geometry.attributes.position) {
+                            throw new Error('Invalid STL geometry: No position attribute found.');
+                        }
+                        resolve(geometry);
+                    } catch (error) {
+                        console.error('Error parsing STL file:', error, 'at', new Date().toISOString());
+                        reject(error);
+                    }
+                };
+                reader.onerror = (error) => {
+                    console.error('Error reading STL file:', error, 'at', new Date().toISOString());
+                    reject(error);
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // Handle upload button click
+        uploadButton.addEventListener('click', () => {
+            console.log('Upload button clicked at', new Date().toISOString());
+            try {
+                fileInput.click();
+                console.log('Triggered file input click at', new Date().toISOString());
+            } catch (err) {
+                console.error('Error triggering file input:', err, 'at', new Date().toISOString());
+                showError('Unable to open file selector. Please check browser permissions or try a different browser.', 'none');
+            }
         });
-        const arrayBuffer = await file.arrayBuffer();
-        viewer.loadModelFromBuffer(arrayBuffer, "stp");
-      } else {
-        alert("Formato no compatible. Usa STL o STEP.");
-      }
-    });
-  </script>
+
+        // Handle file selection
+        fileInput.addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) {
+                console.error('No file selected at', new Date().toISOString());
+                showError('No file selected. Please choose an STL file.', 'stl');
+                return;
+            }
+
+            console.log('Selected file:', file.name, 'Size:', file.size, 'Type:', file.type, 'at', new Date().toISOString());
+            const extension = file.name.split('.').pop().toLowerCase();
+            if (extension !== 'stl') {
+                showError('Invalid file type. Please upload an .STL file.', extension);
+                return;
+            }
+
+            const maxFileSize = 50 * 1024 * 1024; // 50MB
+            if (file.size > maxFileSize) {
+                showError('File is too large. Please upload a file smaller than 50MB.', 'stl');
+                return;
+            }
+
+            loadingMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+            uploadButton.style.display = 'none';
+            guidelinesMessage.style.display = 'none';
+            infoPanel.style.display = 'none';
+            xrayButton.style.display = 'none';
+            analysisButton.style.display = 'none';
+            analysisPanel.style.display = 'none';
+            materialPanel.style.display = 'none';
+
+            if (currentModel) {
+                scene.remove(currentModel);
+                currentModel = null;
+                originalMaterials.clear();
+            }
+            resetMeasurement();
+            resetCrossSection();
+            modelVolume = 0;
+
+            try {
+                const geometry = await loadStlFile(file);
+                const material = new THREE.MeshPhongMaterial({
+                    color: 0xaaaaaa,
+                    clippingPlanes: []
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                scene.add(mesh);
+                currentModel = mesh;
+
+                const box = new THREE.Box3().setFromObject(mesh);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+                mesh.position.sub(center);
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const scale = 50 / maxDim;
+                mesh.scale.set(scale, scale, scale);
+
+                focusCameraOnModel(mesh);
+
+                modelVolume = calculateVolume(geometry) * (scale * scale * scale) / 1000; // cm³
+                fileNameDisplay.textContent = `File: ${file.name}`;
+                volumeDisplay.textContent = `Volume: ${modelVolume.toFixed(2)} g`;
+                dimensionsDisplay.textContent = `Dimensions: X: ${(size.x * scale).toFixed(2)} mm, Y: ${(size.y * scale).toFixed(2)} mm, Z: ${(size.z * scale).toFixed(2)} mm`;
+                infoPanel.style.display = 'block';
+                xrayButton.style.display = 'block';
+                analysisButton.style.display = 'block';
+                materialPanel.style.display = 'block';
+
+                originalMaterials.set(mesh, material);
+                console.log('STL model loaded successfully:', file.name, 'at', new Date().toISOString());
+
+                loadingMessage.style.display = 'none';
+                updatePrice();
+            } catch (err) {
+                console.error('Processing error:', err, 'at', new Date().toISOString());
+                loadingMessage.style.display = 'none';
+                showError(`Error processing file: ${err.message}. Please try a different STL file or check the console.`, 'stl');
+                uploadButton.style.display = 'block';
+                guidelinesMessage.style.display = 'block';
+            }
+        });
+
+        // Show error message
+        function showError(message, extension) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            console.log('Error displayed:', message, 'extension:', extension, 'at', new Date().toISOString());
+        }
+
+        // Toggle X-Ray mode
+        xrayButton.addEventListener('click', () => {
+            if (!currentModel) return;
+            isXrayMode = !isXrayMode;
+            xrayButton.textContent = isXrayMode ? 'Normal Mode' : 'X-Ray Mode';
+
+            if (isXrayMode) {
+                originalMaterials.set(currentModel, currentModel.material);
+                currentModel.material = new THREE.MeshBasicMaterial({
+                    color: 0xaaaaaa,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.5
+                });
+            } else {
+                currentModel.material = originalMaterials.get(currentModel) || new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+            }
+        });
+
+        // Toggle Analysis mode
+        analysisButton.addEventListener('click', () => {
+            if (!currentModel) {
+                showError('No model loaded. Please upload an STL file first.', 'none');
+                return;
+            }
+            isAnalysisMode = !isAnalysisMode;
+            analysisButton.textContent = isAnalysisMode ? 'Exit Analysis' : 'Analysis';
+            analysisPanel.style.display = isAnalysisMode ? 'block' : 'none';
+            if (!isAnalysisMode) {
+                resetMeasurement();
+                resetCrossSection();
+                analysisResults.innerHTML = '';
+                currentModel.material = originalMaterials.get(currentModel) || new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+            }
+        });
+
+        // Wall Thickness Analysis
+        wallThicknessButton.addEventListener('click', () => {
+            if (!currentModel) return;
+            analysisResults.innerHTML = 'Calculating wall thickness...';
+
+            let minThickness = Infinity;
+            let maxThickness = 0;
+            let totalThickness = 0;
+            let count = 0;
+
+            const samplePoints = 30;
+            const box = new THREE.Box3().setFromObject(currentModel);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
+
+            currentModel.material = new THREE.MeshPhongMaterial({
+                color: 0xaaaaaa,
+                clippingPlanes: []
+            });
+            originalMaterials.set(currentModel, currentModel.material);
+
+            for (let i = 0; i < samplePoints; i++) {
+                const point = new THREE.Vector3(
+                    center.x + (Math.random() - 0.5) * size.x,
+                    center.y + (Math.random() - 0.5) * size.y,
+                    center.z + (Math.random() - 0.5) * size.z
+                );
+                const direction = new THREE.Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+                const thickness = calculateThickness(point, direction);
+                if (thickness !== null && isFinite(thickness)) {
+                    minThickness = Math.min(minThickness, thickness);
+                    maxThickness = Math.max(maxThickness, thickness);
+                    totalThickness += thickness;
+                    count++;
+                }
+            }
+
+            const avgThickness = count > 0 ? totalThickness / count : 0;
+            analysisResults.innerHTML = count > 0 ? `
+                <p>Min Thickness: ${minThickness.toFixed(2)} mm</p>
+                <p>Max Thickness: ${maxThickness.toFixed(2)} mm</p>
+                <p>Avg Thickness: ${avgThickness.toFixed(2)} mm</p>
+            ` : '<p>No valid thickness measurements found.</p>';
+        });
+
+        function calculateThickness(point, direction) {
+            raycaster.set(point, direction);
+            const intersects = raycaster.intersectObject(currentModel, true);
+            if (intersects.length >= 2) {
+                return intersects[0].point.distanceTo(intersects[1].point);
+            }
+            return null;
+        }
+
+        // Point-to-Point Measurement
+        measurementButton.addEventListener('click', () => {
+            if (!currentModel) return;
+            isMeasuring = !isMeasuring;
+            measurementButton.textContent = isMeasuring ? 'Stop Measuring' : 'Point-to-Point Measurement';
+            analysisResults.innerHTML = isMeasuring ? 'Click two points on the model to measure distance.' : '';
+            if (!isMeasuring) {
+                resetMeasurement();
+            } else {
+                const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                cursorMarker = new THREE.Mesh(markerGeometry, markerMaterial);
+                cursorMarker.visible = false;
+                scene.add(cursorMarker);
+            }
+        });
+
+        function resetMeasurement() {
+            measurementLines.forEach(line => scene.remove(line));
+            measurementLabels.forEach(label => scene.remove(label));
+            measurementMarkers.forEach(marker => scene.remove(marker));
+            if (cursorMarker) {
+                scene.remove(cursorMarker);
+                cursorMarker = null;
+            }
+            measurementPointPairs = [];
+            measurementLines = [];
+            measurementLabels = [];
+            measurementMarkers = [];
+            isMeasuring = false;
+            measurementButton.textContent = 'Point-to-Point Measurement';
+            analysisResults.innerHTML = '';
+        }
+
+        // Cross-Section View
+        crossSectionButton.addEventListener('click', () => {
+            if (!currentModel) return;
+            isCrossSectionActive = !isCrossSectionActive;
+            crossSectionButton.textContent = isCrossSectionActive ? 'Exit Cross-Section' : 'Cross-Section View';
+            controls.enabled = !isCrossSectionActive;
+            gui.domElement.style.display = isCrossSectionActive ? 'block' : 'none';
+            if (!isCrossSectionActive) {
+                resetCrossSection();
+            } else {
+                createCoordinateAxes();
+                updateClippingPlane();
+            }
+        });
+
+        function updateClippingPlane() {
+            if (!currentModel || !isCrossSectionActive) return;
+
+            const normal = new THREE.Vector3(planeControls.normalX, planeControls.normalY, planeControls.normalZ).normalize();
+            const plane = new THREE.Plane(normal, planeControls.constant);
+            clippingPlanes = [plane];
+
+            if (!currentModel.material) {
+                currentModel.material = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+            }
+            currentModel.material.clippingPlanes = clippingPlanes;
+            currentModel.material.clipShadows = true;
+
+            renderer.clippingPlanes = clippingPlanes;
+
+            if (planeMesh) {
+                scene.remove(planeMesh);
+            }
+            const planeGeometry = new THREE.PlaneGeometry(100, 100);
+            const planeMaterial = new THREE.MeshBasicMaterial({
+                color: 0x808080,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.3,
+                depthTest: false
+            });
+            planeMesh = new THREE.Mesh(planeGeometry, planeMaterial);
+            planeMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+            planeMesh.position.copy(normal.multiplyScalar(planeControls.constant));
+            scene.add(planeMesh);
+
+            if (coordinateAxes) {
+                coordinateAxes.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+            }
+        }
+
+        function resetCrossSection() {
+            clippingPlanes = [];
+            if (currentModel && currentModel.material) {
+                currentModel.material.clippingPlanes = clippingPlanes;
+            }
+            renderer.clippingPlanes = clippingPlanes;
+            if (planeMesh) {
+                scene.remove(planeMesh);
+                planeMesh = null;
+            }
+            if (coordinateAxes) {
+                scene.remove(coordinateAxes);
+                coordinateAxes = null;
+            }
+            isCrossSectionActive = false;
+            crossSectionButton.textContent = 'Cross-Section View';
+            gui.domElement.style.display = 'none';
+        }
+
+        // Mouse events for measurement
+        renderer.domElement.addEventListener('mousemove', (event) => {
+            if (isMeasuring && currentModel) {
+                mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(currentModel, true);
+
+                if (intersects.length > 0 && cursorMarker) {
+                    cursorMarker.position.copy(intersects[0].point);
+                    cursorMarker.visible = true;
+                } else if (cursorMarker) {
+                    cursorMarker.visible = false;
+                }
+            }
+        });
+
+        renderer.domElement.addEventListener('click', (event) => {
+            if (!isMeasuring || !currentModel) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(currentModel, true);
+
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                const currentPair = measurementPointPairs[measurementPointPairs.length - 1] || [];
+                currentPair.push(point);
+                if (currentPair.length === 1) {
+                    measurementPointPairs.push(currentPair);
+                }
+
+                const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                const marker = new THREE.Mesh(markerGeometry, markerMaterial);
+                marker.position.copy(point);
+                scene.add(marker);
+                measurementMarkers.push(marker);
+
+                if (currentPair.length === 2) {
+                    const distance = currentPair[0].distanceTo(currentPair[1]);
+                    const existingResults = analysisResults.innerHTML;
+                    analysisResults.innerHTML = existingResults + `<p>Distance ${measurementPointPairs.length}: ${distance.toFixed(2)} mm</p>`;
+
+                    const geometry = new THREE.BufferGeometry().setFromPoints(currentPair);
+                    const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+                    const line = new THREE.Line(geometry, material);
+                    scene.add(line);
+                    measurementLines.push(line);
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 128;
+                    canvas.height = 32;
+                    const context = canvas.getContext('2d');
+                    context.font = '24px Arial';
+                    context.fillStyle = 'white';
+                    context.fillText(`${distance.toFixed(2)} mm`, 0, 24);
+                    const texture = new THREE.CanvasTexture(canvas);
+                    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+                    const label = new THREE.Sprite(spriteMaterial);
+
+                    const midpoint = currentPair[0].clone().lerp(currentPair[1], 0.5);
+                    const lineDirection = currentPair[1].clone().sub(currentPair[0]).normalize();
+                    const cameraDirection = new THREE.Vector3();
+                    camera.getWorldDirection(cameraDirection);
+                    const perpendicular = new THREE.Vector3();
+                    perpendicular.crossVectors(lineDirection, cameraDirection).normalize();
+                    const offsetDistance = 15;
+                    const offsetPosition = midpoint.clone().add(perpendicular.multiplyScalar(offsetDistance));
+                    label.position.copy(offsetPosition);
+                    label.scale.set(10, 5, 1);
+                    scene.add(label);
+                    measurementLabels.push(label);
+
+                    measurementPointPairs.push([]);
+                }
+            }
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        setupCrossSectionControls();
+        setupMaterialControls();
+    </script>
 </body>
 </html>
