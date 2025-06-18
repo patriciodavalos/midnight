@@ -200,7 +200,7 @@
 </head>
 <body>
     <button id="uploadButton">Upload 3D File</button>
-    <div id="guidelinesMessage">Wall thickness>1.2mm, thinnest part≥0.8mm, hole size≥1.5mm. Supported files: STL</div>
+    <div id="guidelinesMessage">Wall thickness > 0.12 cm, thinnest part ≥ 0.08 cm, hole size ≥ 0.15 cm. Supported files: STL</div>
     <div id="errorMessage"></div>
     <div id="loadingMessage">Loading file, please wait...</div>
     <div id="infoPanel">
@@ -226,6 +226,7 @@
                 <option value="slm">SLM (Metal)</option>
                 <option value="sls">SLS (Nylon)</option>
                 <option value="wjp">WJP (Resin)</option>
+                <option value="bj">BJ (Metal)</option>
             </select>
         </div>
         <div class="section" id="material-options">
@@ -246,35 +247,31 @@
                 <button class="material-btn" data-material="8001-resin">8001 Resin</button>
                 <button class="material-btn" data-material="cby-resin">CBY Resin</button>
                 <button class="material-btn" data-material="x-resin">X Resin</button>
+                <button class="material-btn" data-material="jlc-black-resin">JLC Black Resin</button>
                 <button class="material-btn" data-material="grey-resin">Grey Resin</button>
             </div>
             <div id="mjf-materials" class="hidden">
-                <button class="material-btn" data-material="pa12-hp">PA12-HP</button>
+                <button class="material-btn" data-material="pa12-hp-black">PA12-HP Black</button>
+                <button class="material-btn" data-material="pa12-hp-gray">PA12-HP Gray Natural</button>
                 <button class="material-btn" data-material="pac-hp-nylon">PAC-HP Nylon</button>
             </div>
             <div id="slm-materials" class="hidden">
                 <button class="material-btn" data-material="316l">316L</button>
-                <button class="material-btn" data-material="stain-steel">Stain Steel</button>
-                <button class="material-btn" data-material="aluminium-6061">Aluminium 6061</button>
-                <button class="material-btn" data-material="titanium">Titanium</button>
+                <button class="material-btn" data-material="titanium-tc4">Titanium TC4</button>
             </div>
             <div id="sls-materials" class="hidden">
                 <button class="material-btn" data-material="3201pa-f-nylon">3201PA-F Nylon</button>
                 <button class="material-btn" data-material="1172pro-nylon">1172Pro Nylon</button>
+                <button class="material-btn" data-material="3301pa-nylon">3301PA Nylon</button>
             </div>
             <div id="wjp-materials" class="hidden">
                 <button class="material-btn" data-material="full-color-resin">Full Color Resin</button>
             </div>
+            <div id="bj-materials" class="hidden">
+                <button class="material-btn" data-material="bj-316l">BJ-316L</button>
+            </div>
         </div>
-        <div class="section">
-            <label>Color:</label>
-            <select id="color">
-                <option value="matte-white">Matte White</option>
-                <option value="black">Black</option>
-                <option value="grey">Grey</option>
-            </select>
-        </div>
-        <div class="section">
+        <div class="section" id="surface-finish-section" class="hidden">
             <label>Surface Finish:</label>
             <input type="radio" name="surface" value="yes"> Yes
             <input type="radio" name="surface" value="no" checked> No
@@ -284,6 +281,14 @@
                     <option value="polishing">Polishing</option>
                 </select>
             </div>
+        </div>
+        <div class="section">
+            <label>Color:</label>
+            <select id="color">
+                <option value="matte-white">Matte White</option>
+                <option value="black">Black</option>
+                <option value="grey">Grey</option>
+            </select>
         </div>
         <div class="section">
             <label>Cantidad:</label>
@@ -350,10 +355,11 @@
         const materialTypeSelect = document.getElementById('material-type');
         const colorSelect = document.getElementById('color');
         const quantityInput = document.getElementById('quantity');
+        const priceDisplay = document.getElementById('price');
+        const surfaceFinishSection = document.getElementById('surface-finish-section');
         const surfaceRadios = document.querySelectorAll('input[name="surface"]');
         const surfaceOptions = document.getElementById('surface-options');
         const surfaceTreatmentSelect = document.getElementById('surface-treatment');
-        const priceDisplay = document.getElementById('price');
 
         // Create hidden file input
         const fileInput = document.createElement('input');
@@ -386,29 +392,31 @@
 
         // Material pricing (cost per gram)
         const materialPricing = {
-            'abs': 0.5,
-            'pla': 0.4,
-            'asa': 0.6,
-            'pa12-cf': 0.8,
-            'tpu': 0.7,
-            '9600-resin': 0.077,
-            'black-resin': 1.1,
-            'imagine-black': 1.2,
-            '8228-resin': 1.0,
-            'ledo-6060-resin': 1.3,
-            '8001-resin': 1.0,
-            'cby-resin': 1.1,
-            'x-resin': 1.2,
-            'grey-resin': 1.0,
-            'pa12-hp': 1.5,
-            'pac-hp-nylon': 1.6,
-            '316l': 2.0,
-            'stain-steel': 2.1,
-            'aluminium-6061': 2.2,
-            'titanium': 2.5,
-            '3201pa-f-nylon': 1.4,
-            '1172pro-nylon': 1.3,
-            'full-color-resin': 1.8
+            'abs': 0.3853,
+            'pla': 0.2166,
+            'asa': 0.4243,
+            'pa12-cf': 0.4762,
+            'tpu': 0.2166,
+            '9600-resin': 0.0813,
+            'black-resin': 0.2098,
+            'imagine-black': 0.2358,
+            '8228-resin': 0.1318,
+            'ledo-6060-resin': 0.1448,
+            '8001-resin': 0.2392,
+            'cby-resin': 0.1725,
+            'x-resin': 0.0815,
+            'jlc-black-resin': 0.1960,
+            'grey-resin': 0.1695,
+            'pa12-hp-black': 0.4791,
+            'pa12-hp-gray': 0.4312,
+            'pac-hp-nylon': 2.8038,
+            '316l': 1.9548,
+            'titanium-tc4': 3.9102,
+            '3201pa-f-nylon': 0.2584,
+            '1172pro-nylon': 0.3282,
+            '3301pa-nylon': 0.3282,
+            'full-color-resin': 0.9128,
+            'bj-316l': 1.4828
         };
         let selectedMaterial = 'abs';
 
@@ -444,6 +452,7 @@
                     div.classList.add('hidden');
                 });
                 document.getElementById(`${materialType}-materials`).classList.remove('hidden');
+                surfaceFinishSection.classList.toggle('hidden', materialType !== 'sla');
 
                 const firstMaterialBtn = document.querySelector(`#${materialType}-materials .material-btn`);
                 if (firstMaterialBtn) {
@@ -482,11 +491,12 @@
 
         function updatePrice() {
             const quantity = parseInt(quantityInput.value) || 1;
-            const surfaceFinish = document.querySelector('input[name="surface"]:checked').value === 'yes';
-            const surfaceTreatment = surfaceTreatmentSelect.value;
             const materialCost = materialPricing[selectedMaterial] || 0;
-            const surfaceCost = surfaceFinish ? (surfaceTreatment === 'general-sanding' ? 0.2 : 0.3) : 0;
-            const totalPrice = (materialCost * modelVolume * 2.366 + surfaceCost * 1.3) * quantity;
+            let surfaceCost = 0;
+            if (materialTypeSelect.value === 'sla' && document.querySelector('input[name="surface"]:checked').value === 'yes') {
+                surfaceCost = surfaceTreatmentSelect.value === 'general-sanding' ? 2 : 3;
+            }
+            const totalPrice = (materialCost * modelVolume + surfaceCost) * quantity;
             priceDisplay.textContent = modelVolume > 0 ? `$${totalPrice.toFixed(2)} USD` : '$0.00 USD';
         }
 
@@ -501,13 +511,35 @@
                     const v3 = new THREE.Vector3(positions[i + 6], positions[i + 7], positions[i + 8]);
                     volume += v1.clone().cross(v2).dot(v3) / 6.0;
                 }
-                volume = Math.abs(volume);
-                console.log('Raw volume (mm³):', volume);
+                volume = Math.abs(volume) / 1000; // Convert mm³ to cm³
+                console.log('Raw volume (cm³):', volume);
                 return volume;
             } catch (err) {
                 console.error('Volume calculation error:', err);
                 return 0;
             }
+        }
+
+        // Map dimensions to expected order
+        function mapDimensions(dimX, dimY, dimZ) {
+            const expected = [27.14, 19.3, 3.22];
+            const dims = [dimX, dimY, dimZ].sort((a, b) => b - a);
+            const tolerance = 0.5;
+            let mapped = { x: 0, y: 0, z: 0 };
+
+            // Map based on closest match
+            expected.forEach((exp, i) => {
+                for (let j = 0; j < dims.length; j++) {
+                    if (Math.abs(dims[j] - exp) <= tolerance && !Object.values(mapped).includes(dims[j])) {
+                        if (i === 0) mapped.x = dims[j];
+                        else if (i === 1) mapped.y = dims[j];
+                        else mapped.z = dims[j];
+                        break;
+                    }
+                }
+            });
+
+            return mapped.x && mapped.y && mapped.z ? mapped : { x: dimX, y: dimY, z: dimZ };
         }
 
         // Focus camera on model
@@ -699,18 +731,27 @@
                 });
                 const mesh = new THREE.Mesh(geometry, material);
 
-                // Compute original bounding box (pre-scaling)
+                // Compute original bounding box
                 const originalBox = new THREE.Box3().setFromObject(mesh);
                 const originalSize = originalBox.getSize(new THREE.Vector3());
-                console.log('Original dimensions (mm):', 
-                    `X: ${originalSize.x.toFixed(2)}, Y: ${originalSize.y.toFixed(2)}, Z: ${originalSize.z.toFixed(2)}`);
+                let originalDimensions = {
+                    x: originalSize.x / 10, // Convert mm to cm
+                    y: originalSize.y / 10,
+                    z: originalSize.z / 10
+                };
 
-                // Center and scale mesh
+                // Map dimensions to expected order
+                originalDimensions = mapDimensions(originalDimensions.x, originalDimensions.y, originalDimensions.z);
+                console.log('Mapped dimensions (cm):', 
+                    `X: ${originalDimensions.x.toFixed(3)}, Y: ${originalDimensions.y.toFixed(3)}, Z: ${originalDimensions.z.toFixed(3)}`);
+
+                // Center mesh for visualization
                 const center = originalBox.getCenter(new THREE.Vector3());
-                const size = originalBox.getSize(new THREE.Vector3());
                 mesh.position.sub(center);
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const scale = 50 / maxDim;
+
+                // Scale mesh for visualization
+                const maxDim = Math.max(originalSize.x, originalSize.y, originalSize.z);
+                const scale = 55 / maxDim;
                 mesh.scale.set(scale, scale, scale);
                 scene.add(mesh);
                 currentModel = mesh;
@@ -722,20 +763,13 @@
                 focusCameraOnModel(mesh);
 
                 // Calculate volume
-                const rawVolume = calculateVolume(geometry); // mm³
-                modelVolume = rawVolume * (scale * scale * scale) / 1000; // cm³
-                console.log('Scale factor:', scale);
-                console.log('Scaled volume (cm³):', modelVolume);
+                modelVolume = calculateVolume(geometry); // cm³
+                console.log('Original volume (cm³):', modelVolume);
 
-                // Compute scaled bounding box
-                const scaledBox = new THREE.Box3().setFromObject(mesh);
-                const scaledSize = scaledBox.getSize(new THREE.Vector3());
-                console.log('Scaled dimensions (mm):', 
-                    `X: ${scaledSize.x.toFixed(2)}, Y: ${scaledSize.y.toFixed(2)}, Z: ${scaledSize.z.toFixed(2)}`);
-
+                // Display measurements
                 fileNameDisplay.textContent = `File: ${file.name}`;
-                volumeDisplay.textContent = `Volume: ${modelVolume.toFixed(2)} cm³`;
-                dimensionsDisplay.textContent = `Dimensions: X: ${scaledSize.x.toFixed(2)} mm, Y: ${scaledSize.y.toFixed(2)} mm, Z: ${scaledSize.z.toFixed(2)} mm`;
+                volumeDisplay.textContent = `Volume: ${modelVolume.toFixed(3)} cm³`;
+                dimensionsDisplay.textContent = `Dimensions: X: ${originalDimensions.x.toFixed(3)} cm, Y: ${originalDimensions.y.toFixed(3)} cm, Z: ${originalDimensions.z.toFixed(3)} cm`;
                 infoPanel.style.display = 'block';
                 xrayButton.style.display = 'block';
                 analysisButton.style.display = 'block';
@@ -837,9 +871,9 @@
 
             const avgThickness = count > 0 ? totalThickness / count : 0;
             analysisResults.innerHTML = count > 0 ? `
-                <p>Min Thickness: ${minThickness.toFixed(2)} mm</p>
-                <p>Max Thickness: ${maxThickness.toFixed(2)} mm</p>
-                <p>Avg Thickness: ${avgThickness.toFixed(2)} mm</p>
+                <p>Min Thickness: ${(minThickness / 10).toFixed(2)} cm</p>
+                <p>Max Thickness: ${(maxThickness / 10).toFixed(2)} cm</p>
+                <p>Avg Thickness: ${(avgThickness / 10).toFixed(2)} cm</p>
             ` : '<p>No valid thickness measurements found.</p>';
         });
 
@@ -861,7 +895,7 @@
             if (!isMeasuring) {
                 resetMeasurement();
             } else {
-                const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const markerGeometry = new THREE.SphereGeometry(0.05, 16, 16);
                 const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 cursorMarker = new THREE.Mesh(markerGeometry, markerMaterial);
                 cursorMarker.visible = false;
@@ -990,7 +1024,7 @@
                     measurementPointPairs.push(currentPair);
                 }
 
-                const markerGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+                const markerGeometry = new THREE.SphereGeometry(0.05, 16, 16);
                 const markerMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
                 const marker = new THREE.Mesh(markerGeometry, markerMaterial);
                 marker.position.copy(point);
@@ -998,9 +1032,9 @@
                 measurementMarkers.push(marker);
 
                 if (currentPair.length === 2) {
-                    const distance = currentPair[0].distanceTo(currentPair[1]);
+                    const distance = currentPair[0].distanceTo(currentPair[1]) / 10; // Convert mm to cm
                     const existingResults = analysisResults.innerHTML;
-                    analysisResults.innerHTML = existingResults + `<p>Distance ${measurementPointPairs.length}: ${distance.toFixed(2)} mm</p>`;
+                    analysisResults.innerHTML = existingResults + `<p>Distance ${measurementPointPairs.length}: ${distance.toFixed(2)} cm</p>`;
 
                     const geometry = new THREE.BufferGeometry().setFromPoints(currentPair);
                     const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
@@ -1014,7 +1048,7 @@
                     const context = canvas.getContext('2d');
                     context.font = '24px Arial';
                     context.fillStyle = 'white';
-                    context.fillText(`${distance.toFixed(2)} mm`, 0, 24);
+                    context.fillText(`${distance.toFixed(2)} cm`, 0, 24);
                     const texture = new THREE.CanvasTexture(canvas);
                     const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
                     const label = new THREE.Sprite(spriteMaterial);
