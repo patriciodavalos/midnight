@@ -295,6 +295,13 @@
             <input type="number" id="quantity" value="1" min="1">
         </div>
         <div class="section">
+            <label>Currency:</label>
+            <select id="currency">
+                <option value="usd">USD</option>
+                <option value="mxn">MXN</option>
+            </select>
+        </div>
+        <div class="section">
             <label>Precio Estimado:</label>
             <span id="price">$0.00 USD</span>
         </div>
@@ -314,6 +321,9 @@
             showError('Your browser does not support WebGL. Please use a modern browser.', 'none');
             throw new Error('WebGL not supported');
         }
+
+        // Exchange rate constant
+        const EXCHANGE_RATE_USD_TO_MXN = 20;
 
         // Scene setup
         const scene = new THREE.Scene();
@@ -354,6 +364,7 @@
         const materialPanel = document.getElementById('materialPanel');
         const materialTypeSelect = document.getElementById('material-type');
         const colorSelect = document.getElementById('color');
+        const currencySelect = document.getElementById('currency');
         const quantityInput = document.getElementById('quantity');
         const priceDisplay = document.getElementById('price');
         const surfaceFinishSection = document.getElementById('surface-finish-section');
@@ -390,33 +401,33 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Material pricing (cost per gram)
+        // Material pricing (cost per gram, increased by 50%)
         const materialPricing = {
-            'abs': 0.3853,
-            'pla': 0.2166,
-            'asa': 0.4243,
-            'pa12-cf': 0.4762,
-            'tpu': 0.2166,
-            '9600-resin': 0.0813,
-            'black-resin': 0.2098,
-            'imagine-black': 0.2358,
-            '8228-resin': 0.1318,
-            'ledo-6060-resin': 0.1448,
-            '8001-resin': 0.2392,
-            'cby-resin': 0.1725,
-            'x-resin': 0.0815,
-            'jlc-black-resin': 0.1960,
-            'grey-resin': 0.1695,
-            'pa12-hp-black': 0.4791,
-            'pa12-hp-gray': 0.4312,
-            'pac-hp-nylon': 2.8038,
-            '316l': 1.9548,
-            'titanium-tc4': 3.9102,
-            '3201pa-f-nylon': 0.2584,
-            '1172pro-nylon': 0.3282,
-            '3301pa-nylon': 0.3282,
-            'full-color-resin': 0.9128,
-            'bj-316l': 1.4828
+            'abs': 0.57795,
+            'pla': 0.3249,
+            'asa': 0.63645,
+            'pa12-cf': 0.7143,
+            'tpu': 0.3249,
+            '9600-resin': 0.12195,
+            'black-resin': 0.3147,
+            'imagine-black': 0.3537,
+            '8228-resin': 0.1977,
+            'ledo-6060-resin': 0.2172,
+            '8001-resin': 0.3588,
+            'cby-resin': 0.25875,
+            'x-resin': 0.12225,
+            'jlc-black-resin': 0.294,
+            'grey-resin': 0.25425,
+            'pa12-hp-black': 0.71865,
+            'pa12-hp-gray': 0.6468,
+            'pac-hp-nylon': 4.2057,
+            '316l': 2.9322,
+            'titanium-tc4': 5.8653,
+            '3201pa-f-nylon': 0.3876,
+            '1172pro-nylon': 0.4923,
+            '3301pa-nylon': 0.4923,
+            'full-color-resin': 1.3692,
+            'bj-316l': 2.2242
         };
         let selectedMaterial = 'abs';
 
@@ -485,6 +496,7 @@
             });
 
             colorSelect.addEventListener('change', updatePrice);
+            currencySelect.addEventListener('change', updatePrice);
             quantityInput.addEventListener('input', updatePrice);
             surfaceTreatmentSelect.addEventListener('change', updatePrice);
         }
@@ -496,8 +508,18 @@
             if (materialTypeSelect.value === 'sla' && document.querySelector('input[name="surface"]:checked').value === 'yes') {
                 surfaceCost = surfaceTreatmentSelect.value === 'general-sanding' ? 2 : 3;
             }
-            const totalPrice = (materialCost * modelVolume + surfaceCost) * quantity;
-            priceDisplay.textContent = modelVolume > 0 ? `$${totalPrice.toFixed(2)} USD` : '$0.00 USD';
+            const totalPriceUSD = (materialCost * modelVolume + surfaceCost) * quantity;
+            let totalPrice = totalPriceUSD;
+            let currencySymbol = '$';
+            let currencyLabel = 'USD';
+
+            if (currencySelect.value === 'mxn') {
+                totalPrice = totalPriceUSD * EXCHANGE_RATE_USD_TO_MXN;
+                currencySymbol = 'MX$';
+                currencyLabel = 'MXN';
+            }
+
+            priceDisplay.textContent = modelVolume > 0 ? `${currencySymbol}${totalPrice.toFixed(2)} ${currencyLabel}` : `${currencySymbol}0.00 ${currencyLabel}`;
         }
 
         // Calculate volume of a mesh
