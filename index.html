@@ -401,7 +401,7 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Material pricing (cost per gram, increased by 50%)
+        // Material pricing (cost per gram)
         const materialPricing = {
             'abs': 0.57795,
             'pla': 0.4249,
@@ -549,7 +549,6 @@
             const tolerance = 0.5;
             let mapped = { x: 0, y: 0, z: 0 };
 
-            // Map based on closest match
             expected.forEach((exp, i) => {
                 for (let j = 0; j < dims.length; j++) {
                     if (Math.abs(dims[j] - exp) <= tolerance && !Object.values(mapped).includes(dims[j])) {
@@ -764,7 +763,7 @@
 
                 // Map dimensions to expected order
                 originalDimensions = mapDimensions(originalDimensions.x, originalDimensions.y, originalDimensions.z);
-                console.log('Mapped dimensions (cm):', 
+                console.log('Mapped dimensions (cm):',
                     `X: ${originalDimensions.x.toFixed(3)}, Y: ${originalDimensions.y.toFixed(3)}, Z: ${originalDimensions.z.toFixed(3)}`);
 
                 // Center mesh for visualization
@@ -816,6 +815,9 @@
             errorMessage.textContent = message;
             errorMessage.style.display = 'block';
             console.log('Error displayed:', message, 'extension:', extension, 'at', new Date().toISOString());
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 5000);
         }
 
         // Toggle X-Ray mode
