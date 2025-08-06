@@ -1,0 +1,22 @@
+{
+    "routes": [
+        { "src": "/api/upload", "dest": "/api/upload.js" },
+        { "src": "/api/visit", "dest": "/api/visit.js" },
+        { "src": "/api/files", "dest": "/api/files.js" },
+        { "src": "/(.*)", "dest": "/public/$1" }
+    ],
+    "functions": {
+        "api/upload.js": {
+            "maxDuration": 60,
+            "memory": 1024
+        },
+        "api/visit.js": {
+            "maxDuration": 10,
+            "memory": 128
+        },
+        "api/files.js": {
+            "maxDuration": 10,
+            "memory": 128
+        }
+    }
+}
