@@ -14,17 +14,7 @@ const storage = multer.diskStorage({
         cb(null, `${Date.now()}-${file.originalname}`);
     }
 });
-const upload = multer({ 
-    storage,
-    fileFilter: (req, file, cb) => {
-        const extension = path.extname(file.originalname).toLowerCase();
-        if (extension !== '.stl') {
-            return cb(new Error('Only STL files are allowed'));
-        }
-        cb(null, true);
-    },
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
-});
+const upload = multer({ storage });
 
 // Ensure uploads directory exists
 const uploadDir = './uploads';
@@ -36,8 +26,8 @@ if (!fs.existsSync(uploadDir)) {
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'your-email@gmail.com', // Replace with your email
-        pass: 'your-app-password'     // Replace with your app-specific password
+        user: 'midnight.digitalm@gmail.com', // Replace with your email
+        pass: '3Dprinting'     // Replace with your app-specific password
     }
 });
 
@@ -53,8 +43,8 @@ app.post('/api/visit', (req, res) => {
     
     // Send email notification
     const mailOptions = {
-        from: 'your-email@gmail.com',
-        to: 'your-email@gmail.com', // Your email to receive notifications
+        from: 'midnight.digitalm@gmail.com',
+        to: 'patriciodavalos8@gmail.com', // Your email to receive notifications
         subject: 'New Website Visitor',
         text: `New visitor from IP: ${ip}\nLocation: ${city}, ${country}\nTime: ${timestamp}`
     };
@@ -73,15 +63,15 @@ app.post('/api/visit', (req, res) => {
 // File upload endpoint
 app.post('/api/upload', upload.single('file'), (req, res) => {
     if (!req.file) {
-        return res.status(400).send('No file uploaded or invalid file type');
+        return res.status(400).send('No file uploaded');
     }
 
     // Send email notification for file upload
     const mailOptions = {
         from: 'your-email@gmail.com',
         to: 'your-email@gmail.com',
-        subject: 'New STL File Uploaded',
-        text: `New STL file uploaded: ${req.file.filename}\nStored at: ${req.file.path}\nSize: ${(req.file.size / 1024 / 1024).toFixed(2)} MB`
+        subject: 'New File Uploaded',
+        text: `New file uploaded: ${req.file.filename}\nStored at: ${req.file.path}`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {
