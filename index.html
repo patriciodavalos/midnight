@@ -195,7 +195,7 @@
         #materialPanel .material-btn:hover {
             background: #e07b30;
         }
-        #materialPanel .material-btn.selected {
+        #materialPanel .material-btn:selected {
             background: #007bff;
         }
         #materialPanel .hidden {
@@ -757,9 +757,9 @@
                 return;
             }
 
-            const maxFileSize = 50 * 1024 * 1024; // 50MB
+            const maxFileSize = 100 * 1024 * 1024; // 100MB
             if (file.size > maxFileSize) {
-                showError('File is too large. Please upload a file smaller than 50MB.', 'stl');
+                showError('File is too large. Please upload a file smaller than 100MB.', 'stl');
                 return;
             }
 
@@ -1178,4 +1178,3 @@
     </script>
 </body>
 </html>
-
