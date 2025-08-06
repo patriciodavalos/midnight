@@ -1,0 +1,63 @@
+
+$accessToken = 'YOUR_ACCESS_TOKEN';
+$url = 'https://api.shapeways.com/models/v1';
+// loading file data
+$file = file_get_contents(YOUR_FILE_PATH);
+// generating request data
+$postFields = [
+  "fileName" => "cube.stl", // make sure include the correct file extension
+  "file" => rawurlencode(base64_encode($file)),
+  "description" => "This is a nice cube!",
+  "hasRightsToModel" => 1,
+  "acceptTermsAndConditions" => 1
+];
+$postData = json_encode($postFields);
+ 
+try {
+  $ch = curl_init($url);
+  curl_setopt($ch, CURLOPT_HTTPHEADER,
+    ['Authorization: Bearer ' . $accessToken, 'Content-type: application/json']);
+  curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+  curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  $response = curl_exec($ch);
+  curl_close($ch);
+  // printing API response on screen
+  print_r($response);
+} catch (\Exception $e) {
+ // printing error on screen
+ echo $e->getMessage();
+}
+ 
+            
+// Example API response
+{
+   "result":"success",
+   "modelId":123456,
+   "modelVersion":0,
+   "title":"cube",
+   "fileName":"cube.stl",
+   "contentLength":684,
+   "fileMd5Checksum":"a6d5646bcb5a1437cb38ad07c45adf7",
+   "description":"This is a nice cube!",
+   "isPublic":0,
+   "isClaimable":0,
+   "isForSale":false,
+   "isDownloadable":0,
+   "materials":{
+      "6":{
+         "materialId":6,
+         "markup":0,
+         "isActive":1,
+         "price":4
+      },
+...
+      "addModelPhoto":{
+         "method":"POST",
+         "restUrl":"https:\/\/api.shapeways.com\/models\/v1",
+         "link":"\/models\/v1"
+      }
+   }
+}
+          

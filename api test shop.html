@@ -1,0 +1,36 @@
+<html>
+  <head>
+    <script>
+      const API_KEY = '6KF7vgRih4o0v5qhn3QolYQqGByKNoXcyvfDKaxn';
+      const endpoint = 'https://cors-anywhere.herokuapp.com/https://api.printful.com/products';
+
+      fetch(endpoint, {
+        headers: {
+          'Authorization': 'Basic ' + btoa(API_KEY + ':')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        const products = data.result;
+        let productsHTML = '';
+
+        for (const product of products) {
+          productsHTML += `
+            <div>
+              <h3>${product.name}</h3>
+              <p>${product.id}</p>
+              <p>${product.type}</p>
+              <!-- Add additional product information here -->
+            </div>
+          `;
+        }
+
+        document.querySelector('#products').innerHTML = productsHTML;
+      })
+      .catch(error => console.error(error));
+    </script>
+  </head>
+  <body>
+    <div id="products"></div>
+  </body>
+</html>

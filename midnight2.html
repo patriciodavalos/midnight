@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+     <head>
+     <meta charset="utf-8">
+     <meta http-equiv="X-UA-Compatible" content="IE=edge">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r121/three.min.js"></script>
+     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r121/examples/js/loaders/OBJLoader.js"></script>
+     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r121/examples/js/loaders/STLLoader.js"></script>
+     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r121/examples/js/controls/OrbitControls.js"></script>
+     <script type="module"src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+     <title>Midnight ~ Digital Manufacture</title>
+      <img src="iconOrange-white-removebg-preview.png" class="center" alt="Logo" style="float:right; width:100px; height:100px;">
+    
+     </header>
+      
+      <style>
+        
+        .about-button{
+      background-color: #000033;
+      color: white;
+      border:none;
+      height: 30px;
+      width: 100px;
+      border-radius: 2px;
+      cursor: pointer;
+      }
+      </style>
+
+       <style>
+        
+        .contact-button{
+      background-color: #000033;
+      color: white;
+      border:none;
+      height: 30px;
+      width: 100px;
+      border-radius: 2px;
+      cursor: pointer;
+      }
+      </style>
+
+      <style>
+        
+        .gallery-button{
+         background-color: #000033;
+         color: white;
+         border:none;
+        height: 30px;
+        width: 100px;
+       border-radius: 2px;
+       cursor: pointer;
+}
+</style>
+
+<style>
+  body {font-family: Arial, sans-serif; background-color: #FF6633;}
+  h1 {color: rgba(13, 13, 83, 0.808);}
+  h2 {color: rgb(247, 245, 242);}
+  p {color: rgb(93, 223, 115);}.center {text-align: center;}.large-font {font-size: 30px;}.box {display:flex;}
+  model-viewer { width:800px; height:600px; margin:0, auto}      
+</style>
+
+
+ 
+      <button class="about-button"> 
+       About
+      </button>
+
+     <button class="contact-button"> 
+       Contact
+     </button>
+
+     <button class="gallery-button"> 
+       Gallery
+     </button>
+
+
+
+
+
+
+
+      <body>
+           <h2 class="center large-font">Midnight Digital Manufacturing</h2>
+           <p class="center">Welcome to Midnight Digital Manufacturing, where we provide high-quality 3D printing and manufacturing services. Our team of experts can turn your ideas into reality, quickly and affordably.</p>
+           <form>
+           <div class="center" class="box"> <div>Upload your 3D file </div> 
+           <input class="center" type="file" id="3d-model" accept=".glb,.gltf,.stl,.obj">
+           </form>
+         
+           <model-viewer class="center" id="viewer" camera-controls auto-rotate></model-viewer>
+
+           <script>
+           const input = document.getElementById("3d-model");
+           const viewer = document.getElementById("viewer");
+
+           input.onchange = function() {const file = input.files[0];viewer.src = URL.createObjectURL(file);};
+
+           var currentTime = new Date();
+        
+
+           if (currentTime.getHours() >= 6 && currentTime.getHours() < 18) {document.body.style.backgroundColor = "#FF6633";} 
+           else {document.body.style.backgroundColor = "#000033";}
+
+           viewer.setModel(geometry);
+           viewer.setModel(object);
+
+
+
+           var stlLoader = new THREE.STLLoader();
+           var objLoader = new THREE.OBJLoader();
+           input.onchange = function() {
+            const file = input.files[0];
+            const fileExtension = file.name.split(".")[1];
+            if (fileExtension === "stl") {
+            stlLoader.load(file, function(geometry) {
+            viewer.src = geometry;
+             });
+            } else if (fileExtension === "obj") {
+             objLoader.load(file, function(object) {
+            viewer.src = object;
+             });
+             } else {
+              viewer.src = URL.createObjectURL(file);
+              }
+               };
+
+               const reader = new FileReader();
+               reader.onload = function(event) {
+                // pass the result to the loader
+                stlLoader.load(event.target.result, function(geometry) {
+                    viewer.setModel(geometry);
+                });
+}
+reader.readAsArrayBuffer(file);
+
+
+           </script>
+       </body>
+
+           <main>
+          <h2 class="center">Instant Quote</h2>
+       <p class="center">To get an instant quote for your 3D printing or manufacturing project, simply upload your 3D model using the form below:</p>
+      
+       <div style="text-align: center;"></div>
+       <div class="center";></div>
+       <img src="3dprint.gif" alt="3D printing machine" style="display: block; margin: auto;" width= "400" height= "300" >
+       </div>
+       <h2 class="center">About</h2>
+       <p class="center">Midnight Digital Manufacturing is a leading provider of 3D printing and manufacturing services. Our team of experts has years of experience in the industry and is dedicated to helping our clients turn their ideas into reality.</p>
+       <h2 class="center">Contact</h2>
+       <p class="center">To get in touch with us, please send an email to info@midnightdm.com or give us a call at 1-800-555-1212.</p>
+       <div style="text-align: center;">
+       <img src="cofee_cuo-removebg-preview.png" alt="Coffee cup 3D printed in stainless steel" width="400" height="300">
+       <img src="switch_contorl-removebg-preview.png" alt="3D printed Nintendo Switch controller" width="400" height="300">
+        <img src="ps4_volante-removebg-preview.png" alt="3D printed PS4 steering wheel" width="400" height="300">
+        </div>
+        <div id="loading-indicator" style="display: none;">
+          <img src="loading-spinner.gif" alt="Loading...">
+         </div>
+       </main>
+
+        <footer>
+        <p class="center">Copyright Midnight Digital Manufacturing</p>
+        </footer>
+      
+</html>
