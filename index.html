@@ -74,6 +74,17 @@
             z-index: 10;
             display: none;
         }
+        #notification {
+            position: absolute;
+            top: 65%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: green;
+            font-size: 16px;
+            z-index: 10;
+            display: none;
+            text-align: center;
+        }
         #infoPanel {
             position: absolute;
             bottom: 50px;
@@ -195,17 +206,6 @@
         }
         #materialPanel #price {
             font-weight: bold;
-        }
-        #notification {
-            position: absolute;
-            top: 65%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: green;
-            font-size: 16px;
-            z-index: 10;
-            display: none;
-            text-align: center;
         }
     </style>
 </head>
@@ -331,18 +331,26 @@
         // Notify server of page visit and get location
         async function notifyVisit() {
             try {
+                console.log('Fetching visitor location...');
                 const response = await fetch('https://ipapi.co/json/');
+                if (!response.ok) throw new Error(`Location API error: ${response.status} ${response.statusText}`);
                 const locationData = await response.json();
-                await fetch('/api/visit', {
+                console.log('Location data:', locationData);
+                const visitResponse = await fetch('/api/visit', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        ip: locationData.ip,
-                        city: locationData.city,
-                        country: locationData.country_name,
+                        ip: locationData.ip || 'unknown',
+                        city: locationData.city || 'unknown',
+                        country: locationData.country_name || 'unknown',
                         timestamp: new Date().toISOString()
                     })
                 });
+                if (!visitResponse.ok) {
+                    const errorText = await visitResponse.text();
+                    throw new Error(`Visit notification error: ${visitResponse.status} ${errorText}`);
+                }
+                console.log('Visit notification sent successfully');
             } catch (error) {
                 console.error('Error notifying visit:', error);
             }
@@ -757,6 +765,7 @@
 
             loadingMessage.style.display = 'block';
             errorMessage.style.display = 'none';
+            notification.style.display = 'none';
             uploadButton.style.display = 'none';
             guidelinesMessage.style.display = 'none';
             infoPanel.style.display = 'none';
@@ -764,7 +773,6 @@
             analysisButton.style.display = 'none';
             analysisPanel.style.display = 'none';
             materialPanel.style.display = 'none';
-            notification.style.display = 'none';
 
             if (currentModel) {
                 scene.remove(currentModel);
@@ -781,6 +789,7 @@
 
             try {
                 // Upload file to server
+                console.log('Uploading file to server:', file.name);
                 const formData = new FormData();
                 formData.append('file', file);
                 const uploadResponse = await fetch('/api/upload', {
@@ -788,8 +797,10 @@
                     body: formData
                 });
                 if (!uploadResponse.ok) {
-                    throw new Error('Server error during file upload');
+                    const errorText = await uploadResponse.text();
+                    throw new Error(`Server error during file upload: ${uploadResponse.status} ${errorText}`);
                 }
+                console.log('File uploaded to server successfully');
                 notification.style.display = 'block';
                 setTimeout(() => {
                     notification.style.display = 'none';
@@ -1167,3 +1178,4 @@
     </script>
 </body>
 </html>
+
