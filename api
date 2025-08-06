@@ -1,1 +1,54 @@
-      
+const nodemailer = require('nodemailer');
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: 'your-email@gmail.com',
+        pass: 'your-app-specific-password'
+    }
+});
+
+module.exports = async (req, res) => {
+    try {
+        const { ip, city, country, timestamp } = req.body;
+        console.log('Received visit:', { ip, city, country, timestamp });
+
+        const mailOptions = {
+            from: 'your-email@gmail.com',
+            to: 'patriciodavalos8@gmail.com',
+            subject: 'New Website Visitor',
+            text: `New visitor from IP: ${ip}\nLocation: ${city}, ${country}\nTime: ${timestamp}`
+        };
+
+        await transporter.sendMail(mailOptions);
+        console.log('Visit email sent');
+        res.status(200).send('Visit recorded');
+    } catch (error) {
+        console.error('Error sending visit email:', error);
+        res.status(500).send('Error sending visit notification');
+    }
+};
+
+const fs = require('fs').promises;
+const path = require('path');
+
+const uploadDir = '/tmp/Uploads';
+
+module.exports = async (req, res) => {
+    try {
+        const files = await fs.readdir(uploadDir);
+        const fileList = await Promise.all(files.map(async (file) => {
+            const stats = await fs.stat(path.join(uploadDir, file));
+            return {
+                name: file,
+                path: path.join(uploadDir, file),
+                size: stats.size / 1024 / 1024 // Size in MB
+            };
+        }));
+        console.log('Listed uploaded files:', fileList);
+        res.status(200).json(fileList);
+    } catch (err) {
+        console.error('Error reading uploads directory:', err);
+        res.status(500).send('Error reading uploads directory');
+    }
+};
