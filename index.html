@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Printing Service</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- Suppress favicon 404 -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <style>
         body {
             margin: 0;
@@ -306,7 +306,6 @@
         </div>
     </div>
 
-    <!-- Three.js and dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
@@ -384,7 +383,7 @@
         let isAnalysisMode = false;
         let isMeasuring = false;
         let isCrossSectionActive = false;
-        let modelVolume = 0; // Volume in cm³
+        let modelVolume = 0;
         let measurementPointPairs = [];
         let measurementLines = [];
         let measurementLabels = [];
@@ -531,7 +530,7 @@
                     const v3 = new THREE.Vector3(positions[i + 6], positions[i + 7], positions[i + 8]);
                     volume += v1.clone().cross(v2).dot(v3) / 6.0;
                 }
-                volume = Math.abs(volume) / 1000; // Convert mm³ to cm³
+                volume = Math.abs(volume) / 1000;
                 return volume;
             } catch (err) {
                 console.error('Volume calculation error:', err);
@@ -659,7 +658,6 @@
         // Handle upload button click
         uploadButton.addEventListener('click', () => {
             console.log('Upload button clicked at', new Date().toISOString());
-            console.log('Triggered file input click at', new Date().toISOString());
             fileInput.click();
         });
 
@@ -672,7 +670,7 @@
                 return;
             }
 
-            console.log('Selected file:', file.name, 'Size:', file.size, 'Type:', file.type, 'at', new Date().toISOString());
+            console.log('Selected file:', file.name, 'Size:', file.size, 'Type:', file.type || '', 'at', new Date().toISOString());
 
             const extension = file.name.split('.').pop().toLowerCase();
             console.log('File extension:', extension, 'at', new Date().toISOString());
@@ -720,16 +718,14 @@
                 });
                 const mesh = new THREE.Mesh(geometry, material);
 
-                // Compute original bounding box
                 const originalBox = new THREE.Box3().setFromObject(mesh);
                 const originalSize = originalBox.getSize(new THREE.Vector3());
                 const originalDimensions = {
-                    x: originalSize.x / 10, // Convert mm to cm
+                    x: originalSize.x / 10,
                     y: originalSize.y / 10,
                     z: originalSize.z / 10
                 };
 
-                // Center and scale mesh
                 const center = originalBox.getCenter(new THREE.Vector3());
                 mesh.position.sub(center);
                 const maxDim = Math.max(originalSize.x, originalSize.y, originalSize.z);
@@ -738,13 +734,11 @@
                 scene.add(mesh);
                 currentModel = mesh;
 
-                // Add bounding box
                 boundingBoxHelper = new THREE.BoxHelper(mesh, 0xffff00);
                 scene.add(boundingBoxHelper);
 
                 focusCameraOnModel(mesh);
 
-                // Calculate volume
                 modelVolume = calculateVolume(geometry);
                 fileNameDisplay.textContent = `File: ${file.name}`;
                 volumeDisplay.textContent = `Volume: ${modelVolume.toFixed(3)} cm³`;
@@ -765,8 +759,9 @@
                 errorMessage.style.display = 'block';
                 uploadButton.style.display = 'block';
                 guidelinesMessage.style.display = 'block';
+                console.log('Error displayed:', errorMessage.textContent, 'extension:', extension, 'at', new Date().toISOString());
             }
-        });
+        }, true);
 
         // Toggle X-Ray mode
         xrayButton.addEventListener('click', () => {
@@ -1005,7 +1000,7 @@
                 measurementMarkers.push(marker);
 
                 if (currentPair.length === 2) {
-                    const distance = currentPair[0].distanceTo(currentPair[1]) / 10; // Convert mm to cm
+                    const distance = currentPair[0].distanceTo(currentPair[1]) / 10;
                     const existingResults = analysisResults.innerHTML;
                     analysisResults.innerHTML = existingResults + `<p>Distance ${measurementPointPairs.length}: ${distance.toFixed(2)} cm</p>`;
 
@@ -1069,6 +1064,11 @@
         console.log('Page loaded, script running at', new Date().toISOString());
         setupCrossSectionControls();
         setupMaterialControls();
+
+        // Override notifyVisit to prevent /api/visit call
+        window.notifyVisit = function() {
+            console.log('Skipped /api/visit call at', new Date().toISOString());
+        };
     </script>
 </body>
 </html>
