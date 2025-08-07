@@ -660,14 +660,16 @@
             console.log('Upload button clicked at', new Date().toISOString());
             console.log('Triggered file input click at', new Date().toISOString());
             fileInput.click();
-        });
+        }, true);
 
         // Handle file selection
         fileInput.addEventListener('change', async (event) => {
+            event.stopImmediatePropagation(); // Prevent injected.js from intercepting
             const file = event.target.files[0];
             if (!file) {
                 errorMessage.textContent = 'No file selected. Please choose an STL file.';
                 errorMessage.style.display = 'block';
+                console.log('Error displayed: No file selected. Please choose an STL file. at', new Date().toISOString());
                 return;
             }
 
@@ -678,6 +680,7 @@
             if (extension !== 'stl') {
                 errorMessage.textContent = 'Invalid file type. Please upload an .STL file.';
                 errorMessage.style.display = 'block';
+                console.log('Error displayed: Invalid file type. Please upload an .STL file. extension:', extension, 'at', new Date().toISOString());
                 return;
             }
 
@@ -685,6 +688,7 @@
             if (file.size > maxFileSize) {
                 errorMessage.textContent = 'File is too large. Please upload a file smaller than 50MB.';
                 errorMessage.style.display = 'block';
+                console.log('Error displayed: File is too large. Please upload a file smaller than 50MB. extension:', extension, 'at', new Date().toISOString());
                 return;
             }
 
@@ -788,6 +792,7 @@
             if (!currentModel) {
                 errorMessage.textContent = 'No model loaded. Please upload an STL file first.';
                 errorMessage.style.display = 'block';
+                console.log('Error displayed: No model loaded. Please upload an STL file first. at', new Date().toISOString());
                 return;
             }
             isAnalysisMode = !isAnalysisMode;
@@ -1065,11 +1070,6 @@
         console.log('Page loaded, script running at', new Date().toISOString());
         setupCrossSectionControls();
         setupMaterialControls();
-
-        // Override notifyVisit to prevent /api/visit call
-        window.notifyVisit = function() {
-            console.log('Skipped /api/visit call at', new Date().toISOString());
-        };
     </script>
 </body>
 </html>
