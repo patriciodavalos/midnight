@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Printing Service</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- Suppress favicon 404 -->
     <style>
         body {
             margin: 0;
@@ -370,6 +371,7 @@
         const surfaceTreatmentSelect = document.getElementById('surface-treatment');
 
         // Create hidden file input
+        console.log('File input created with accept=".stl" at', new Date().toISOString());
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = '.stl';
@@ -656,6 +658,8 @@
 
         // Handle upload button click
         uploadButton.addEventListener('click', () => {
+            console.log('Upload button clicked at', new Date().toISOString());
+            console.log('Triggered file input click at', new Date().toISOString());
             fileInput.click();
         });
 
@@ -668,7 +672,10 @@
                 return;
             }
 
+            console.log('Selected file:', file.name, 'Size:', file.size, 'Type:', file.type, 'at', new Date().toISOString());
+
             const extension = file.name.split('.').pop().toLowerCase();
+            console.log('File extension:', extension, 'at', new Date().toISOString());
             if (extension !== 'stl') {
                 errorMessage.textContent = 'Invalid file type. Please upload an .STL file.';
                 errorMessage.style.display = 'block';
@@ -752,6 +759,7 @@
                 loadingMessage.style.display = 'none';
                 updatePrice();
             } catch (err) {
+                console.error('Processing error:', err);
                 loadingMessage.style.display = 'none';
                 errorMessage.textContent = `Error processing file: ${err.message}. Please try a different STL file.`;
                 errorMessage.style.display = 'block';
@@ -1058,6 +1066,7 @@
         });
 
         // Initialize
+        console.log('Page loaded, script running at', new Date().toISOString());
         setupCrossSectionControls();
         setupMaterialControls();
     </script>
