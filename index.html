@@ -1,9 +1,49 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Model Viewer</title>
+    <title>3D Printing Service</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <style>
         body {
             margin: 0;
@@ -13,6 +53,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            font-family: Arial, sans-serif;
         }
         canvas {
             position: absolute;
@@ -82,7 +123,6 @@
             color: white;
             padding: 10px;
             border-radius: 5px;
-            font-family: Arial, sans-serif;
             font-size: 14px;
             z-index: 10;
             display: none;
@@ -119,7 +159,6 @@
             color: white;
             padding: 10px;
             border-radius: 5px;
-            font-family: Arial, sans-serif;
             font-size: 14px;
             z-index: 10;
             display: none;
@@ -151,7 +190,6 @@
             color: white;
             padding: 10px;
             border-radius: 5px;
-            font-family: Arial, sans-serif;
             font-size: 14px;
             z-index: 10;
             display: none;
@@ -193,7 +231,12 @@
         #materialPanel input[type="radio"] {
             margin: 0 5px 0 10px;
         }
-        #materialPanel #price {
+        #materialPanel #price, #materialPanel #shipping {
+            font-weight: bold;
+            color: #f28c38;
+            font-size: 18px;
+        }
+        #materialPanel #weight {
             font-weight: bold;
         }
     </style>
@@ -305,25 +348,32 @@
             <label>Precio Estimado:</label>
             <span id="price">$0.00 USD</span>
         </div>
+        <div class="section">
+            <label>Costo de Envío:</label>
+            <span id="shipping">$0.00 USD</span>
+        </div>
+        <div class="section">
+            <label>Peso Total:</label>
+            <span id="weight">0.00 kg</span>
+        </div>
     </div>
 
-    <!-- Three.js and dependencies -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/libs/dat.gui.min.js"></script>
 
     <script>
-        console.log('Page loaded, script running at', new Date().toISOString());
-
         // Check browser support
         if (!window.WebGLRenderingContext) {
-            showError('Your browser does not support WebGL. Please use a modern browser.', 'none');
+            document.getElementById('errorMessage').textContent = 'Your browser does not support WebGL. Please use a modern browser.';
+            document.getElementById('errorMessage').style.display = 'block';
             throw new Error('WebGL not supported');
         }
 
-        // Exchange rate constant
+        // Constants
         const EXCHANGE_RATE_USD_TO_MXN = 20;
+        const SHIPPING_RATE_USD_PER_KG = 114.42309; // Reduced by 15% from 134.6154
 
         // Scene setup
         const scene = new THREE.Scene();
@@ -367,26 +417,21 @@
         const currencySelect = document.getElementById('currency');
         const quantityInput = document.getElementById('quantity');
         const priceDisplay = document.getElementById('price');
+        const weightDisplay = document.getElementById('weight');
+        const shippingDisplay = document.getElementById('shipping');
         const surfaceFinishSection = document.getElementById('surface-finish-section');
         const surfaceRadios = document.querySelectorAll('input[name="surface"]');
         const surfaceOptions = document.getElementById('surface-options');
         const surfaceTreatmentSelect = document.getElementById('surface-treatment');
 
-        // Create hidden file input
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.stl';
-        fileInput.style.display = 'none';
-        document.body.appendChild(fileInput);
-        console.log('File input created with accept=".stl" at', new Date().toISOString());
-
+        let fileInput = null;
         let currentModel = null;
         let boundingBoxHelper = null;
         let isXrayMode = false;
         let isAnalysisMode = false;
         let isMeasuring = false;
         let isCrossSectionActive = false;
-        let modelVolume = 0; // Volume in cm³
+        let modelVolume = 0;
         let measurementPointPairs = [];
         let measurementLines = [];
         let measurementLabels = [];
@@ -401,34 +446,64 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Material pricing (cost per gram, increased by 50%)
+        // Material pricing (cost per gram, reduced by 64% total: 60% + 10%)
         const materialPricing = {
-            'abs': 0.57795,
-            'pla': 0.4249,
-            'asa': 0.53645,
-            'pa12-cf': 0.8143,
-            'tpu': 0.4249,
-            '9600-resin': 0.22195,
-            'black-resin': 0.4147,
-            'imagine-black': 0.4537,
-            '8228-resin': 0.3577,
-            'ledo-6060-resin': 0.2872,
-            '8001-resin': 0.4588,
-            'cby-resin': 0.35875,
-            'x-resin': 0.22225,
-            'jlc-black-resin': 0.394,
-            'grey-resin': 0.35425,
-            'pa12-hp-black': 0.81865,
-            'pa12-hp-gray': 0.7468,
-            'pac-hp-nylon': 5.2057,
-            '316l': 3.8322,
-            'titanium-tc4': 6.5653,
-            '3201pa-f-nylon': 0.4876,
-            '1172pro-nylon': 0.5923,
-            '3301pa-nylon': 0.5923,
-            'full-color-resin': 1.7692,
-            'bj-316l': 2.8242
+            'abs': 0.4981395,
+            'pla': 0.394169,
+            'asa': 0.4945245,
+            'pa12-cf': 0.659583,
+            'tpu': 0.344169,
+            '9600-resin': 0.1959795,
+            'black-resin': 0.368307,
+            'imagine-black': 0.448497,
+            '8228-resin': 0.322137,
+            'ledo-6060-resin': 0.313632,
+            '8001-resin': 0.452628,
+            'cby-resin': 0.3715875,
+            'x-resin': 0.2367225,
+            'jlc-black-resin': 0.40014,
+            'grey-resin': 0.4003425,
+            'pa12-hp-black': 0.7441065,
+            'pa12-hp-gray': 0.685908,
+            'pac-hp-nylon': 5.026617,
+            '316l': 2.614082,
+            'titanium-tc4': 6.127893,
+            '3201pa-f-nylon': 0.416956,
+            '1172pro-nylon': 0.511763,
+            '3301pa-nylon': 0.560763,
+            'full-color-resin': 2.243052,
+            'bj-316l': 3.097602
         };
+
+        // Material density (g/cm³)
+        const materialDensities = {
+            'abs': 1.04,
+            'pla': 1.24,
+            'asa': 1.07,
+            'pa12-cf': 1.10,
+            'tpu': 1.20,
+            '9600-resin': 1.15,
+            'black-resin': 1.18,
+            'imagine-black': 1.18,
+            '8228-resin': 1.16,
+            'ledo-6060-resin': 1.17,
+            '8001-resin': 1.15,
+            'cby-resin': 1.16,
+            'x-resin': 1.15,
+            'jlc-black-resin': 1.18,
+            'grey-resin': 1.18,
+            'pa12-hp-black': 1.01,
+            'pa12-hp-gray': 1.01,
+            'pac-hp-nylon': 1.02,
+            '316l': 7.98,
+            'titanium-tc4': 4.43,
+            '3201pa-f-nylon': 1.00,
+            '1172pro-nylon': 1.00,
+            '3301pa-nylon': 1.00,
+            'full-color-resin': 1.20,
+            'bj-316l': 7.98
+        };
+
         let selectedMaterial = 'abs';
 
         // Initialize dat.GUI for cross-section controls
@@ -508,18 +583,30 @@
             if (materialTypeSelect.value === 'sla' && document.querySelector('input[name="surface"]:checked').value === 'yes') {
                 surfaceCost = surfaceTreatmentSelect.value === 'general-sanding' ? 2 : 3;
             }
-            const totalPriceUSD = (materialCost * modelVolume + surfaceCost) * quantity;
-            let totalPrice = totalPriceUSD;
+            const materialPriceUSD = (materialCost * modelVolume + surfaceCost) * quantity;
+
+            // Calculate weight (in kg)
+            const density = materialDensities[selectedMaterial] || 1.0;
+            const weightKg = (modelVolume * density * quantity) / 1000;
+
+            // Calculate shipping cost
+            const shippingCostUSD = weightKg * SHIPPING_RATE_USD_PER_KG;
+
+            let totalPrice = materialPriceUSD;
+            let shippingCost = shippingCostUSD;
             let currencySymbol = '$';
             let currencyLabel = 'USD';
 
             if (currencySelect.value === 'mxn') {
-                totalPrice = totalPriceUSD * EXCHANGE_RATE_USD_TO_MXN;
+                totalPrice = materialPriceUSD * EXCHANGE_RATE_USD_TO_MXN;
+                shippingCost = shippingCostUSD * EXCHANGE_RATE_USD_TO_MXN;
                 currencySymbol = 'MX$';
                 currencyLabel = 'MXN';
             }
 
             priceDisplay.textContent = modelVolume > 0 ? `${currencySymbol}${totalPrice.toFixed(2)} ${currencyLabel}` : `${currencySymbol}0.00 ${currencyLabel}`;
+            weightDisplay.textContent = modelVolume > 0 ? `${weightKg.toFixed(2)} kg` : '0.00 kg';
+            shippingDisplay.textContent = modelVolume > 0 ? `${currencySymbol}${shippingCost.toFixed(2)} ${currencyLabel}` : `${currencySymbol}0.00 ${currencyLabel}`;
         }
 
         // Calculate volume of a mesh
@@ -533,35 +620,12 @@
                     const v3 = new THREE.Vector3(positions[i + 6], positions[i + 7], positions[i + 8]);
                     volume += v1.clone().cross(v2).dot(v3) / 6.0;
                 }
-                volume = Math.abs(volume) / 1000; // Convert mm³ to cm³
-                console.log('Raw volume (cm³):', volume);
+                volume = Math.abs(volume) / 1000;
                 return volume;
             } catch (err) {
                 console.error('Volume calculation error:', err);
                 return 0;
             }
-        }
-
-        // Map dimensions to expected order
-        function mapDimensions(dimX, dimY, dimZ) {
-            const expected = [27.14, 19.3, 3.22];
-            const dims = [dimX, dimY, dimZ].sort((a, b) => b - a);
-            const tolerance = 0.5;
-            let mapped = { x: 0, y: 0, z: 0 };
-
-            // Map based on closest match
-            expected.forEach((exp, i) => {
-                for (let j = 0; j < dims.length; j++) {
-                    if (Math.abs(dims[j] - exp) <= tolerance && !Object.values(mapped).includes(dims[j])) {
-                        if (i === 0) mapped.x = dims[j];
-                        else if (i === 1) mapped.y = dims[j];
-                        else mapped.z = dims[j];
-                        break;
-                    }
-                }
-            });
-
-            return mapped.x && mapped.y && mapped.z ? mapped : { x: dimX, y: dimY, z: dimZ };
         }
 
         // Focus camera on model
@@ -580,91 +644,84 @@
 
                 controls.target.copy(center);
                 controls.update();
-                console.log('Camera focused on model at', new Date().toISOString());
             } catch (err) {
                 console.error('Camera focus error:', err);
                 throw err;
             }
         }
 
-        // Create coordinate axes with circular paths
+        // Create coordinate axes
         function createCoordinateAxes() {
-            try {
-                if (coordinateAxes) {
-                    scene.remove(coordinateAxes);
-                }
-                coordinateAxes = new THREE.Group();
-
-                const arrowLength = 20;
-                const arrowHeadLength = 4;
-                const arrowHeadWidth = 2;
-
-                const xArrow = new THREE.ArrowHelper(
-                    new THREE.Vector3(1, 0, 0),
-                    new THREE.Vector3(0, 0, 0),
-                    arrowLength,
-                    0xff0000,
-                    arrowHeadLength,
-                    arrowHeadWidth
-                );
-                coordinateAxes.add(xArrow);
-
-                const yArrow = new THREE.ArrowHelper(
-                    new THREE.Vector3(0, 1, 0),
-                    new THREE.Vector3(0, 0, 0),
-                    arrowLength,
-                    0x00ff00,
-                    arrowHeadLength,
-                    arrowHeadWidth
-                );
-                coordinateAxes.add(yArrow);
-
-                const zArrow = new THREE.ArrowHelper(
-                    new THREE.Vector3(0, 0, 1),
-                    new THREE.Vector3(0, 0, 0),
-                    arrowLength,
-                    0x0000ff,
-                    arrowHeadLength,
-                    arrowHeadWidth
-                );
-                coordinateAxes.add(zArrow);
-
-                const circleRadius = 15;
-                const segments = 64;
-
-                let ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
-                let points = ellipseCurve.getPoints(segments);
-                let geometry = new THREE.BufferGeometry().setFromPoints(points);
-                let material = new THREE.LineBasicMaterial({ color: 0xff0000 });
-                let circleX = new THREE.Line(geometry, material);
-                circleX.rotation.x = Math.PI / 2;
-                coordinateAxes.add(circleX);
-
-                ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
-                points = ellipseCurve.getPoints(segments);
-                geometry = new THREE.BufferGeometry().setFromPoints(points);
-                material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-                let circleY = new THREE.Line(geometry, material);
-                circleY.rotation.y = Math.PI / 2;
-                coordinateAxes.add(circleY);
-
-                ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
-                points = ellipseCurve.getPoints(segments);
-                geometry = new THREE.BufferGeometry().setFromPoints(points);
-                material = new THREE.LineBasicMaterial({ color: 0x0000ff });
-                let circleZ = new THREE.Line(geometry, material);
-                coordinateAxes.add(circleZ);
-
-                scene.add(coordinateAxes);
-                console.log('Coordinate axes with circles created at', new Date().toISOString());
-            } catch (err) {
-                console.error('Create coordinate axes error:', err);
+            if (coordinateAxes) {
+                scene.remove(coordinateAxes);
             }
+            coordinateAxes = new THREE.Group();
+
+            const arrowLength = 20;
+            const arrowHeadLength = 4;
+            const arrowHeadWidth = 2;
+
+            const xArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(1, 0, 0),
+                new THREE.Vector3(0, 0, 0),
+                arrowLength,
+                0xff0000,
+                arrowHeadLength,
+                arrowHeadWidth
+            );
+            coordinateAxes.add(xArrow);
+
+            const yArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 1, 0),
+                new THREE.Vector3(0, 0, 0),
+                arrowLength,
+                0x00ff00,
+                arrowHeadLength,
+                arrowHeadWidth
+            );
+            coordinateAxes.add(yArrow);
+
+            const zArrow = new THREE.ArrowHelper(
+                new THREE.Vector3(0, 0, 1),
+                new THREE.Vector3(0, 0, 0),
+                arrowLength,
+                0x0000ff,
+                arrowHeadLength,
+                arrowHeadWidth
+            );
+            coordinateAxes.add(zArrow);
+
+            const circleRadius = 15;
+            const segments = 64;
+
+            let ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
+            let points = ellipseCurve.getPoints(segments);
+            let geometry = new THREE.BufferGeometry().setFromPoints(points);
+            let material = new THREE.LineBasicMaterial({ color: 0xff0000 });
+            let circleX = new THREE.Line(geometry, material);
+            circleX.rotation.x = Math.PI / 2;
+            coordinateAxes.add(circleX);
+
+            ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
+            points = ellipseCurve.getPoints(segments);
+            geometry = new THREE.BufferGeometry().setFromPoints(points);
+            material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+            let circleY = new THREE.Line(geometry, material);
+            circleY.rotation.y = Math.PI / 2;
+            coordinateAxes.add(circleY);
+
+            ellipseCurve = new THREE.EllipseCurve(0, 0, circleRadius, circleRadius, 0, 2 * Math.PI, false, 0);
+            points = ellipseCurve.getPoints(segments);
+            geometry = new THREE.BufferGeometry().setFromPoints(points);
+            material = new THREE.LineBasicMaterial({ color: 0x0000ff });
+            let circleZ = new THREE.Line(geometry, material);
+            coordinateAxes.add(circleZ);
+
+            scene.add(coordinateAxes);
         }
 
         // Load and process STL file
         async function loadStlFile(file) {
-            console.log('Loading STL file:', file.name, 'at', new Date().toISOString());
             const reader = new FileReader();
             return new Promise((resolve, reject) => {
                 reader.onload = (event) => {
@@ -676,147 +733,144 @@
                         }
                         resolve(geometry);
                     } catch (error) {
-                        console.error('Error parsing STL file:', error, 'at', new Date().toISOString());
+                        console.error('Error parsing STL file:', error);
                         reject(error);
                     }
                 };
                 reader.onerror = (error) => {
-                    console.error('Error reading STL file:', error, 'at', new Date().toISOString());
+                    console.error('Error reading STL file:', error);
                     reject(error);
                 };
                 reader.readAsArrayBuffer(file);
             });
         }
 
+        // Create new file input to avoid injected.js listeners
+        function createFileInput() {
+            if (fileInput) {
+                fileInput.remove(); // Remove old file input and its listeners
+            }
+            fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.stl';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            console.log('File input created with accept=".stl" at', new Date().toISOString());
+
+            fileInput.addEventListener('change', async (event) => {
+                event.stopImmediatePropagation(); // Prevent injected.js from intercepting
+                console.log('File input change event triggered at', new Date().toISOString());
+                const file = event.target.files[0];
+                if (!file) {
+                    errorMessage.textContent = 'No file selected. Please choose an STL file.';
+                    errorMessage.style.display = 'block';
+                    console.log('Error displayed: No file selected. Please choose an STL file. at', new Date().toISOString());
+                    return;
+                }
+
+                console.log('Selected file:', file.name, 'Size:', file.size, 'Type:', file.type || '', 'at', new Date().toISOString());
+
+                const extension = file.name.split('.').pop().toLowerCase();
+                console.log('File extension:', extension, 'at', new Date().toISOString());
+                if (extension !== 'stl') {
+                    errorMessage.textContent = 'Invalid file type. Please upload an .STL file.';
+                    errorMessage.style.display = 'block';
+                    console.log('Error displayed: Invalid file type. Please upload an .STL file. extension:', extension, 'at', new Date().toISOString());
+                    return;
+                }
+
+                const maxFileSize = 50 * 1024 * 1024; // 50MB
+                if (file.size > maxFileSize) {
+                    errorMessage.textContent = 'File is too large. Please upload a file smaller than 50MB.';
+                    errorMessage.style.display = 'block';
+                    console.log('Error displayed: File is too large. Please upload a file smaller than 50MB. extension:', extension, 'at', new Date().toISOString());
+                    return;
+                }
+
+                loadingMessage.style.display = 'block';
+                errorMessage.style.display = 'none';
+                uploadButton.style.display = 'none';
+                guidelinesMessage.style.display = 'none';
+                infoPanel.style.display = 'none';
+                xrayButton.style.display = 'none';
+                analysisButton.style.display = 'none';
+                analysisPanel.style.display = 'none';
+                materialPanel.style.display = 'none';
+
+                if (currentModel) {
+                    scene.remove(currentModel);
+                    currentModel = null;
+                    originalMaterials.clear();
+                }
+                if (boundingBoxHelper) {
+                    scene.remove(boundingBoxHelper);
+                    boundingBoxHelper = null;
+                }
+                resetMeasurement();
+                resetCrossSection();
+                modelVolume = 0;
+
+                try {
+                    const geometry = await loadStlFile(file);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0xaaaaaa,
+                        clippingPlanes: []
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+
+                    const originalBox = new THREE.Box3().setFromObject(mesh);
+                    const originalSize = originalBox.getSize(new THREE.Vector3());
+                    const originalDimensions = {
+                        x: originalSize.x / 10,
+                        y: originalSize.y / 10,
+                        z: originalSize.z / 10
+                    };
+
+                    const center = originalBox.getCenter(new THREE.Vector3());
+                    mesh.position.sub(center);
+                    const maxDim = Math.max(originalSize.x, originalSize.y, originalSize.z);
+                    const scale = 55 / maxDim;
+                    mesh.scale.set(scale, scale, scale);
+                    scene.add(mesh);
+                    currentModel = mesh;
+
+                    boundingBoxHelper = new THREE.BoxHelper(mesh, 0xffff00);
+                    scene.add(boundingBoxHelper);
+
+                    focusCameraOnModel(mesh);
+
+                    modelVolume = calculateVolume(geometry);
+                    fileNameDisplay.textContent = `File: ${file.name}`;
+                    volumeDisplay.textContent = `Volume: ${modelVolume.toFixed(3)} cm³`;
+                    dimensionsDisplay.textContent = `Dimensions: X: ${originalDimensions.x.toFixed(3)} cm, Y: ${originalDimensions.y.toFixed(3)} cm, Z: ${originalDimensions.z.toFixed(3)} cm`;
+                    infoPanel.style.display = 'block';
+                    xrayButton.style.display = 'block';
+                    analysisButton.style.display = 'block';
+                    materialPanel.style.display = 'block';
+
+                    originalMaterials.set(mesh, material);
+
+                    loadingMessage.style.display = 'none';
+                    updatePrice();
+                } catch (err) {
+                    console.error('Processing error:', err);
+                    loadingMessage.style.display = 'none';
+                    errorMessage.textContent = `Error processing file: ${err.message}. Please try a different STL file or check the console.`;
+                    errorMessage.style.display = 'block';
+                    uploadButton.style.display = 'block';
+                    guidelinesMessage.style.display = 'block';
+                    console.log('Error displayed:', errorMessage.textContent, 'extension:', extension, 'at', new Date().toISOString());
+                }
+            }, true);
+        }
+
         // Handle upload button click
         uploadButton.addEventListener('click', () => {
             console.log('Upload button clicked at', new Date().toISOString());
-            try {
-                fileInput.click();
-                console.log('Triggered file input click at', new Date().toISOString());
-            } catch (err) {
-                console.error('Error triggering file input:', err, 'at', new Date().toISOString());
-                showError('Unable to open file selector. Please check browser permissions or try a different browser.', 'none');
-            }
-        });
-
-        // Handle file selection
-        fileInput.addEventListener('change', async (event) => {
-            const file = event.target.files[0];
-            if (!file) {
-                console.error('No file selected at', new Date().toISOString());
-                showError('No file selected. Please choose an STL file.', 'stl');
-                return;
-            }
-
-            console.log('Selected file:', file.name, 'Size:', file.size, 'Type:', file.type, 'at', new Date().toISOString());
-            const extension = file.name.split('.').pop().toLowerCase();
-            if (extension !== 'stl') {
-                showError('Invalid file type. Please upload an .STL file.', extension);
-                return;
-            }
-
-            const maxFileSize = 50 * 1024 * 1024; // 50MB
-            if (file.size > maxFileSize) {
-                showError('File is too large. Please upload a file smaller than 50MB.', 'stl');
-                return;
-            }
-
-            loadingMessage.style.display = 'block';
-            errorMessage.style.display = 'none';
-            uploadButton.style.display = 'none';
-            guidelinesMessage.style.display = 'none';
-            infoPanel.style.display = 'none';
-            xrayButton.style.display = 'none';
-            analysisButton.style.display = 'none';
-            analysisPanel.style.display = 'none';
-            materialPanel.style.display = 'none';
-
-            if (currentModel) {
-                scene.remove(currentModel);
-                currentModel = null;
-                originalMaterials.clear();
-            }
-            if (boundingBoxHelper) {
-                scene.remove(boundingBoxHelper);
-                boundingBoxHelper = null;
-            }
-            resetMeasurement();
-            resetCrossSection();
-            modelVolume = 0;
-
-            try {
-                const geometry = await loadStlFile(file);
-                const material = new THREE.MeshPhongMaterial({
-                    color: 0xaaaaaa,
-                    clippingPlanes: []
-                });
-                const mesh = new THREE.Mesh(geometry, material);
-
-                // Compute original bounding box
-                const originalBox = new THREE.Box3().setFromObject(mesh);
-                const originalSize = originalBox.getSize(new THREE.Vector3());
-                let originalDimensions = {
-                    x: originalSize.x / 10, // Convert mm to cm
-                    y: originalSize.y / 10,
-                    z: originalSize.z / 10
-                };
-
-                // Map dimensions to expected order
-                originalDimensions = mapDimensions(originalDimensions.x, originalDimensions.y, originalDimensions.z);
-                console.log('Mapped dimensions (cm):', 
-                    `X: ${originalDimensions.x.toFixed(3)}, Y: ${originalDimensions.y.toFixed(3)}, Z: ${originalDimensions.z.toFixed(3)}`);
-
-                // Center mesh for visualization
-                const center = originalBox.getCenter(new THREE.Vector3());
-                mesh.position.sub(center);
-
-                // Scale mesh for visualization
-                const maxDim = Math.max(originalSize.x, originalSize.y, originalSize.z);
-                const scale = 55 / maxDim;
-                mesh.scale.set(scale, scale, scale);
-                scene.add(mesh);
-                currentModel = mesh;
-
-                // Add bounding box
-                boundingBoxHelper = new THREE.BoxHelper(mesh, 0xffff00); // Yellow wireframe
-                scene.add(boundingBoxHelper);
-
-                focusCameraOnModel(mesh);
-
-                // Calculate volume
-                modelVolume = calculateVolume(geometry); // cm³
-                console.log('Original volume (cm³):', modelVolume);
-
-                // Display measurements
-                fileNameDisplay.textContent = `File: ${file.name}`;
-                volumeDisplay.textContent = `Volume: ${modelVolume.toFixed(3)} cm³`;
-                dimensionsDisplay.textContent = `Dimensions: X: ${originalDimensions.x.toFixed(3)} cm, Y: ${originalDimensions.y.toFixed(3)} cm, Z: ${originalDimensions.z.toFixed(3)} cm`;
-                infoPanel.style.display = 'block';
-                xrayButton.style.display = 'block';
-                analysisButton.style.display = 'block';
-                materialPanel.style.display = 'block';
-
-                originalMaterials.set(mesh, material);
-                console.log('STL model loaded successfully:', file.name, 'at', new Date().toISOString());
-
-                loadingMessage.style.display = 'none';
-                updatePrice();
-            } catch (err) {
-                console.error('Processing error:', err, 'at', new Date().toISOString());
-                loadingMessage.style.display = 'none';
-                showError(`Error processing file: ${err.message}. Please try a different STL file or check the console.`, 'stl');
-                uploadButton.style.display = 'block';
-                guidelinesMessage.style.display = 'block';
-            }
-        });
-
-        // Show error message
-        function showError(message, extension) {
-            errorMessage.textContent = message;
-            errorMessage.style.display = 'block';
-            console.log('Error displayed:', message, 'extension:', extension, 'at', new Date().toISOString());
-        }
+            createFileInput(); // Create new file input to clear injected.js listeners
+            console.log('Triggered file input click at', new Date().toISOString());
+            fileInput.click();
+        }, true);
 
         // Toggle X-Ray mode
         xrayButton.addEventListener('click', () => {
@@ -840,7 +894,9 @@
         // Toggle Analysis mode
         analysisButton.addEventListener('click', () => {
             if (!currentModel) {
-                showError('No model loaded. Please upload an STL file first.', 'none');
+                errorMessage.textContent = 'No model loaded. Please upload an STL file first.';
+                errorMessage.style.display = 'block';
+                console.log('Error displayed: No model loaded. Please upload an STL file first. at', new Date().toISOString());
                 return;
             }
             isAnalysisMode = !isAnalysisMode;
@@ -1054,7 +1110,7 @@
                 measurementMarkers.push(marker);
 
                 if (currentPair.length === 2) {
-                    const distance = currentPair[0].distanceTo(currentPair[1]) / 10; // Convert mm to cm
+                    const distance = currentPair[0].distanceTo(currentPair[1]) / 10;
                     const existingResults = analysisResults.innerHTML;
                     analysisResults.innerHTML = existingResults + `<p>Distance ${measurementPointPairs.length}: ${distance.toFixed(2)} cm</p>`;
 
@@ -1109,11 +1165,16 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            if (currentModel) {
+                focusCameraOnModel(currentModel);
+            }
         });
 
         // Initialize
+        console.log('Page loaded, script running at', new Date().toISOString());
         setupCrossSectionControls();
         setupMaterialControls();
+        createFileInput(); // Initial file input creation
     </script>
 </body>
 </html>
