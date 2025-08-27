@@ -1,43 +1,5 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+```html
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -301,6 +263,7 @@
             <div id="slm-materials" class="hidden">
                 <button class="material-btn" data-material="316l">316L</button>
                 <button class="material-btn" data-material="titanium-tc4">Titanium TC4</button>
+                <button class="material-btn" data-material="aluminum-alsi10mg">Aluminum (AlSi10Mg)</button>
             </div>
             <div id="sls-materials" class="hidden">
                 <button class="material-btn" data-material="3201pa-f-nylon">PA12-F Nylon</button>
@@ -364,6 +327,40 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/libs/dat.gui.min.js"></script>
 
     <script>
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+
         // Check browser support
         if (!window.WebGLRenderingContext) {
             document.getElementById('errorMessage').textContent = 'Your browser does not support WebGL. Please use a modern browser.';
@@ -373,7 +370,7 @@
 
         // Constants
         const EXCHANGE_RATE_USD_TO_MXN = 20;
-        const SHIPPING_RATE_USD_PER_KG = 114.42309; // Reduced by 15% from 134.6154
+        const SHIPPING_RATE_USD_PER_KG = 80.096163; // Reduced by 30% from 114.42309
 
         // Scene setup
         const scene = new THREE.Scene();
@@ -446,34 +443,35 @@
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
 
-        // Material pricing (cost per gram, reduced by 64% total: 60% + 10%)
+        // Material pricing (cost per gram, increased to compensate for 30% shipping cost reduction)
         const materialPricing = {
-  "abs": 0.3892256,          // 0.278304 * 1.4
-  "pla": 0.3490396,          // 0.249314 * 1.4
-  "asa": 0.3882144,          // 0.277296 * 1.4
-  "pa12-cf": 0.3745742,      // 0.267553 * 1.4
-  "tpu": 0.3880744,          // 0.277196 * 1.4
-  "9600-resin": 0.3107118,   // 0.221937 * 1.4
-  "black-resin": 0.3389456,  // 0.242104 * 1.4
-  "imagine-black": 0.3702496,// 0.264464 * 1.4
-  "8228-resin": 0.3209206,   // 0.229229 * 1.4
-  "ledo-6060-resin": 0.3566388, // 0.254742 * 1.4
-  "8001-resin": 0.3718596,   // 0.265614 * 1.4
-  "cby-resin": 0.3402238,    // 0.243017 * 1.4
-  "x-resin": 0.3656506,      // 0.261179 * 1.4
-  "jlc-black-resin": 0.3908968, // 0.279212 * 1.4
-  "grey-resin": 0.6637288,   // 0.474092 * 1.4
-  "pa12-hp-black": 1.1492362,// 0.820883 * 1.4
-  "pa12-hp-gray": 1.1655518, // 0.832537 * 1.4
-  "pac-hp-nylon": 3.5235466, // 2.516819 * 1.4
-  "316l": 3.362513,          // 2.401795 * 1.4
-  "titanium-tc4": 3.9534306, // 2.823879 * 1.4
-  "3201pa-f-nylon": 0.7092498, // 0.506607 * 1.4
-  "1172pro-nylon": 0.7462574,// 0.533041 * 1.4
-  "3301pa-nylon": 0.7653842, // 0.546703 * 1.4
-  "full-color-resin": 3.2176816, // 2.298344 * 1.4
-  "bj-316l": 3.1609032       // 2.257788 * 1.4
-};
+            "abs": 0.483309444,          // 0.44760944 + 1.04 * 0.034326927
+            "pla": 0.439970208,          // 0.40139554 + 1.24 * 0.034326927
+            "asa": 0.483159501,          // 0.44644656 + 1.07 * 0.034326927
+            "pa12-cf": 0.468519714,      // 0.43076033 + 1.10 * 0.034326927
+            "tpu": 0.487477507,          // 0.44628556 + 1.20 * 0.034326927
+            "9600-resin": 0.395694507,   // 0.35731857 + 1.15 * 0.034326927
+            "black-resin": 0.430295465,  // 0.38978744 + 1.18 * 0.034326927
+            "imagine-black": 0.466294465,// 0.42578644 + 1.18 * 0.034326927
+            "8228-resin": 0.408873425,   // 0.36905869 + 1.16 * 0.034326927
+            "ledo-6060-resin": 0.450279177, // 0.41013462 + 1.17 * 0.034326927
+            "8001-resin": 0.466014467,   // 0.42763854 + 1.15 * 0.034326927
+            "cby-resin": 0.431072095,    // 0.39125737 + 1.16 * 0.034326927
+            "x-resin": 0.458874117,      // 0.42049819 + 1.15 * 0.034326927
+            "jlc-black-resin": 0.490039345, // 0.44953132 + 1.18 * 0.034326927
+            "grey-resin": 0.803795345,   // 0.76328732 + 1.18 * 0.034326927
+            "pa12-hp-black": 1.356304597, // 1.32162163 + 1.01 * 0.034326927
+            "pa12-hp-gray": 1.375067547, // 1.34038457 + 1.01 * 0.034326927
+            "pac-hp-nylon": 4.087079563, // 4.05207859 + 1.02 * 0.034326927
+            "316l": 4.140794868,         // 3.86688995 + 7.98 * 0.034326927
+            "titanium-tc4": 4.698794133, // 4.54644519 + 4.43 * 0.034326927
+            "aluminum-alsi10mg": 3.134896164, // 3.0429 + 2.68 * 0.034326927
+            "3201pa-f-nylon": 0.849963197, // 0.81563627 + 1.00 * 0.034326927
+            "1172pro-nylon": 0.892522937, // 0.85819601 + 1.00 * 0.034326927
+            "3301pa-nylon": 0.914518757, // 0.88019183 + 1.00 * 0.034326927
+            "full-color-resin": 3.741525791, // 3.70033384 + 1.20 * 0.034326927
+            "bj-316l": 3.908943601       // 3.63503868 + 7.98 * 0.034326927
+        };
 
         // Material density (g/cm³)
         const materialDensities = {
@@ -497,6 +495,7 @@
             'pac-hp-nylon': 1.02,
             '316l': 7.98,
             'titanium-tc4': 4.43,
+            'aluminum-alsi10mg': 2.68,
             '3201pa-f-nylon': 1.00,
             '1172pro-nylon': 1.00,
             '3301pa-nylon': 1.00,
@@ -748,7 +747,7 @@
         // Create new file input to avoid injected.js listeners
         function createFileInput() {
             if (fileInput) {
-                fileInput.remove(); // Remove old file input and its listeners
+                fileInput.remove();
             }
             fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -758,7 +757,7 @@
             console.log('File input created with accept=".stl" at', new Date().toISOString());
 
             fileInput.addEventListener('change', async (event) => {
-                event.stopImmediatePropagation(); // Prevent injected.js from intercepting
+                event.stopImmediatePropagation();
                 console.log('File input change event triggered at', new Date().toISOString());
                 const file = event.target.files[0];
                 if (!file) {
@@ -779,7 +778,7 @@
                     return;
                 }
 
-                const maxFileSize = 50 * 1024 * 1024; // 50MB
+                const maxFileSize = 50 * 1024 * 1024;
                 if (file.size > maxFileSize) {
                     errorMessage.textContent = 'File is too large. Please upload a file smaller than 50MB.';
                     errorMessage.style.display = 'block';
@@ -867,7 +866,7 @@
         // Handle upload button click
         uploadButton.addEventListener('click', () => {
             console.log('Upload button clicked at', new Date().toISOString());
-            createFileInput(); // Create new file input to clear injected.js listeners
+            createFileInput();
             console.log('Triggered file input click at', new Date().toISOString());
             fileInput.click();
         }, true);
@@ -1174,7 +1173,8 @@
         console.log('Page loaded, script running at', new Date().toISOString());
         setupCrossSectionControls();
         setupMaterialControls();
-        createFileInput(); // Initial file input creation
+        createFileInput();
     </script>
 </body>
 </html>
+```
