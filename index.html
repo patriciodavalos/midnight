@@ -1,4 +1,6 @@
-```html
+
+          
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -239,14 +241,16 @@
             <div id="fdm-materials">
                 <button class="material-btn" data-material="abs">ABS</button>
                 <button class="material-btn" data-material="pla">PLA</button>
+                <button class="material-btn" data-material="petg">PETG</button>
                 <button class="material-btn" data-material="asa">ASA</button>
-                <button class="material-btn" data-material="pa12-cf">PA12-CF</button>
+                <button class="material-btn" data-material="pc">PC</button>
                 <button class="material-btn" data-material="tpu">TPU</button>
+                <button class="material-btn" data-material="pa12-cf">PA12-CF</button>
             </div>
             <div id="sla-materials" class="hidden">
-                <button class="material-btn" data-material="9600-resin">white Resin</button>
+                <button class="material-btn" data-material="9600-resin">White Resin</button>
                 <button class="material-btn" data-material="black-resin">Black Resin</button>
-                <button class="material-btn" data-material="imagine-black">imagine Black</button>
+                <button class="material-btn" data-material="imagine-black">Imagine Black</button>
                 <button class="material-btn" data-material="8228-resin">8228 Resin</button>
                 <button class="material-btn" data-material="ledo-6060-resin">LEDO 6060 Resin</button>
                 <button class="material-btn" data-material="8001-resin">8001 Resin</button>
@@ -267,7 +271,7 @@
             </div>
             <div id="sls-materials" class="hidden">
                 <button class="material-btn" data-material="3201pa-f-nylon">PA12-F Nylon</button>
-                <button class="material-btn" data-material="1172pro-nylon">ro Nylon</button>
+                <button class="material-btn" data-material="1172pro-nylon">Pro Nylon</button>
                 <button class="material-btn" data-material="3301pa-nylon">PA11 Nylon</button>
             </div>
             <div id="wjp-materials" class="hidden">
@@ -277,7 +281,24 @@
                 <button class="material-btn" data-material="bj-316l">BJ-316L</button>
             </div>
         </div>
-        <div class="section" id="surface-finish-section" class="hidden">
+        <div class="section hidden" id="infill-section">
+            <label>Infill Percentage:</label>
+            <select id="infill">
+                <option value="20">20%</option>
+                <option value="40">40%</option>
+                <option value="60">60%</option>
+                <option value="80">80%</option>
+                <option value="95">95%</option>
+                <option value="100">100%</option>
+            </select>
+        </div>
+        <div class="section hidden" id="color-section">
+            <label>Color:</label>
+            <select id="color">
+                <!-- Dynamically populated based on material -->
+            </select>
+        </div>
+        <div class="section hidden" id="surface-finish-section">
             <label>Surface Finish:</label>
             <input type="radio" name="surface" value="yes"> Yes
             <input type="radio" name="surface" value="no" checked> No
@@ -287,14 +308,6 @@
                     <option value="polishing">Polishing</option>
                 </select>
             </div>
-        </div>
-        <div class="section">
-            <label>Color:</label>
-            <select id="color">
-                <option value="matte-white">Matte White</option>
-                <option value="black">Black</option>
-                <option value="grey">Grey</option>
-            </select>
         </div>
         <div class="section">
             <label>Cantidad:</label>
@@ -334,31 +347,31 @@
           return cell !== '' && cell != null;
         }
         function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
 
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
 
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                      row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                      headerRowIndex = 0;
+                    }
+
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
                 }
-
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
             }
-        }
-        return gk_fileData[filename] || "";
+            return gk_fileData[filename] || "";
         }
 
         // Check browser support
@@ -410,6 +423,7 @@
         const analysisResults = document.getElementById('analysisResults');
         const materialPanel = document.getElementById('materialPanel');
         const materialTypeSelect = document.getElementById('material-type');
+        const colorSection = document.getElementById('color-section');
         const colorSelect = document.getElementById('color');
         const currencySelect = document.getElementById('currency');
         const quantityInput = document.getElementById('quantity');
@@ -420,6 +434,8 @@
         const surfaceRadios = document.querySelectorAll('input[name="surface"]');
         const surfaceOptions = document.getElementById('surface-options');
         const surfaceTreatmentSelect = document.getElementById('surface-treatment');
+        const infillSection = document.getElementById('infill-section');
+        const infillSelect = document.getElementById('infill');
 
         let fileInput = null;
         let currentModel = null;
@@ -445,41 +461,45 @@
 
         // Material pricing (cost per gram, increased to compensate for 30% shipping cost reduction)
         const materialPricing = {
-            "abs": 0.483309444,          // 0.44760944 + 1.04 * 0.034326927
-            "pla": 0.439970208,          // 0.40139554 + 1.24 * 0.034326927
-            "asa": 0.483159501,          // 0.44644656 + 1.07 * 0.034326927
-            "pa12-cf": 0.468519714,      // 0.43076033 + 1.10 * 0.034326927
-            "tpu": 0.487477507,          // 0.44628556 + 1.20 * 0.034326927
-            "9600-resin": 0.395694507,   // 0.35731857 + 1.15 * 0.034326927
-            "black-resin": 0.430295465,  // 0.38978744 + 1.18 * 0.034326927
-            "imagine-black": 0.466294465,// 0.42578644 + 1.18 * 0.034326927
-            "8228-resin": 0.408873425,   // 0.36905869 + 1.16 * 0.034326927
-            "ledo-6060-resin": 0.450279177, // 0.41013462 + 1.17 * 0.034326927
-            "8001-resin": 0.466014467,   // 0.42763854 + 1.15 * 0.034326927
-            "cby-resin": 0.431072095,    // 0.39125737 + 1.16 * 0.034326927
-            "x-resin": 0.458874117,      // 0.42049819 + 1.15 * 0.034326927
-            "jlc-black-resin": 0.490039345, // 0.44953132 + 1.18 * 0.034326927
-            "grey-resin": 0.803795345,   // 0.76328732 + 1.18 * 0.034326927
-            "pa12-hp-black": 1.356304597, // 1.32162163 + 1.01 * 0.034326927
-            "pa12-hp-gray": 1.375067547, // 1.34038457 + 1.01 * 0.034326927
-            "pac-hp-nylon": 4.087079563, // 4.05207859 + 1.02 * 0.034326927
-            "316l": 4.140794868,         // 3.86688995 + 7.98 * 0.034326927
-            "titanium-tc4": 4.698794133, // 4.54644519 + 4.43 * 0.034326927
-            "aluminum-alsi10mg": 3.134896164, // 3.0429 + 2.68 * 0.034326927
-            "3201pa-f-nylon": 0.849963197, // 0.81563627 + 1.00 * 0.034326927
-            "1172pro-nylon": 0.892522937, // 0.85819601 + 1.00 * 0.034326927
-            "3301pa-nylon": 0.914518757, // 0.88019183 + 1.00 * 0.034326927
-            "full-color-resin": 3.741525791, // 3.70033384 + 1.20 * 0.034326927
-            "bj-316l": 3.908943601       // 3.63503868 + 7.98 * 0.034326927
+            "abs": 0.483309444,
+            "pla": 0.439970208,
+            "petg": 0.093595197,
+            "asa": 0.106729812,
+            "pc": 0.121192312,
+            "tpu": 0.131192312,
+            "pa12-cf": 0.468519714,
+            "9600-resin": 0.395694507,
+            "black-resin": 0.430295465,
+            "imagine-black": 0.466294465,
+            "8228-resin": 0.408873425,
+            "ledo-6060-resin": 0.450279177,
+            "8001-resin": 0.466014467,
+            "cby-resin": 0.431072095,
+            "x-resin": 0.458874117,
+            "jlc-black-resin": 0.490039345,
+            "grey-resin": 0.803795345,
+            "pa12-hp-black": 1.356304597,
+            "pa12-hp-gray": 1.375067547,
+            "pac-hp-nylon": 4.087079563,
+            "316l": 4.140794868,
+            "titanium-tc4": 4.698794133,
+            "aluminum-alsi10mg": 3.134896164,
+            "3201pa-f-nylon": 0.849963197,
+            "1172pro-nylon": 0.892522937,
+            "3301pa-nylon": 0.914518757,
+            "full-color-resin": 3.741525791,
+            "bj-316l": 3.908943601
         };
 
         // Material density (g/cm³)
         const materialDensities = {
             'abs': 1.04,
             'pla': 1.24,
+            'petg': 1.27,
             'asa': 1.07,
-            'pa12-cf': 1.10,
+            'pc': 1.20,
             'tpu': 1.20,
+            'pa12-cf': 1.10,
             '9600-resin': 1.15,
             'black-resin': 1.18,
             'imagine-black': 1.18,
@@ -503,7 +523,39 @@
             'bj-316l': 7.98
         };
 
-        let selectedMaterial = 'abs';
+        // Material color mappings
+        const materialColors = {
+            'abs': ['white', 'black', 'grey'],
+            'pla': ['white', 'black', 'grey'],
+            'petg': ['white', 'black', 'grey', 'red', 'blue', 'yellow', 'green'],
+            'asa': ['white', 'black', 'grey'],
+            'pc': ['white', 'black', 'translucent', 'black-translucent'],
+            'tpu': ['white', 'black', 'red', 'yellow', 'blue', 'grey'],
+            'pa12-cf': ['black'],
+            '9600-resin': ['white'],
+            'black-resin': ['black'],
+            'imagine-black': ['black'],
+            '8228-resin': ['white'],
+            'ledo-6060-resin': ['white'],
+            '8001-resin': ['white'],
+            'cby-resin': ['white'],
+            'x-resin': ['white'],
+            'jlc-black-resin': ['black'],
+            'grey-resin': ['grey'],
+            'pa12-hp-black': ['black'],
+            'pa12-hp-gray': ['grey'],
+            'pac-hp-nylon': ['grey'],
+            '316l': ['silver'],
+            'titanium-tc4': ['silver'],
+            'aluminum-alsi10mg': ['silver'],
+            '3201pa-f-nylon': ['white'],
+            '1172pro-nylon': ['white'],
+            '3301pa-nylon': ['white'],
+            'full-color-resin': ['full-color'],
+            'bj-316l': ['silver']
+        };
+
+        let selectedMaterial = null;
 
         // Initialize dat.GUI for cross-section controls
         let gui = null;
@@ -537,13 +589,10 @@
                     div.classList.add('hidden');
                 });
                 document.getElementById(`${materialType}-materials`).classList.remove('hidden');
+                infillSection.classList.toggle('hidden', materialType !== 'fdm');
                 surfaceFinishSection.classList.toggle('hidden', materialType !== 'sla');
-
-                const firstMaterialBtn = document.querySelector(`#${materialType}-materials .material-btn`);
-                if (firstMaterialBtn) {
-                    selectedMaterial = firstMaterialBtn.dataset.material;
-                    updateMaterialSelection(firstMaterialBtn);
-                }
+                colorSection.classList.add('hidden'); // Hide color section until material is selected
+                selectedMaterial = null; // Reset selected material
                 updatePrice();
             });
 
@@ -551,6 +600,7 @@
                 btn.addEventListener('click', function() {
                     selectedMaterial = this.dataset.material;
                     updateMaterialSelection(this);
+                    updateColorOptions();
                     updatePrice();
                 });
             });
@@ -560,6 +610,17 @@
                     btn.classList.remove('selected');
                 });
                 selectedBtn.classList.add('selected');
+            }
+
+            function updateColorOptions() {
+                if (!selectedMaterial) {
+                    colorSection.classList.add('hidden');
+                    return;
+                }
+                const availableColors = materialColors[selectedMaterial] || ['white'];
+                colorSection.classList.remove('hidden');
+                colorSelect.innerHTML = availableColors.map(color => `<option value="${color}">${color.charAt(0).toUpperCase() + color.slice(1)}</option>`).join('');
+                colorSelect.value = availableColors[0];
             }
 
             surfaceRadios.forEach(radio => {
@@ -573,20 +634,22 @@
             currencySelect.addEventListener('change', updatePrice);
             quantityInput.addEventListener('input', updatePrice);
             surfaceTreatmentSelect.addEventListener('change', updatePrice);
+            infillSelect.addEventListener('change', updatePrice);
         }
 
         function updatePrice() {
             const quantity = parseInt(quantityInput.value) || 1;
-            const materialCost = materialPricing[selectedMaterial] || 0;
+            const materialCost = selectedMaterial ? materialPricing[selectedMaterial] || 0 : 0;
+            const infillPercentage = materialTypeSelect.value === 'fdm' ? parseInt(infillSelect.value) || 100 : 100;
             let surfaceCost = 0;
             if (materialTypeSelect.value === 'sla' && document.querySelector('input[name="surface"]:checked').value === 'yes') {
                 surfaceCost = surfaceTreatmentSelect.value === 'general-sanding' ? 2 : 3;
             }
-            const materialPriceUSD = (materialCost * modelVolume + surfaceCost) * quantity;
+            const materialPriceUSD = (materialCost * modelVolume * (infillPercentage / 100) + surfaceCost) * quantity;
 
             // Calculate weight (in kg)
-            const density = materialDensities[selectedMaterial] || 1.0;
-            const weightKg = (modelVolume * density * quantity) / 1000;
+            const density = selectedMaterial ? materialDensities[selectedMaterial] || 1.0 : 1.0;
+            const weightKg = (modelVolume * density * (infillPercentage / 100) * quantity) / 1000;
 
             // Calculate shipping cost
             const shippingCostUSD = weightKg * SHIPPING_RATE_USD_PER_KG;
@@ -603,9 +666,9 @@
                 currencyLabel = 'MXN';
             }
 
-            priceDisplay.textContent = modelVolume > 0 ? `${currencySymbol}${totalPrice.toFixed(2)} ${currencyLabel}` : `${currencySymbol}0.00 ${currencyLabel}`;
-            weightDisplay.textContent = modelVolume > 0 ? `${weightKg.toFixed(2)} kg` : '0.00 kg';
-            shippingDisplay.textContent = modelVolume > 0 ? `${currencySymbol}${shippingCost.toFixed(2)} ${currencyLabel}` : `${currencySymbol}0.00 ${currencyLabel}`;
+            priceDisplay.textContent = modelVolume > 0 && selectedMaterial ? `${currencySymbol}${totalPrice.toFixed(2)} ${currencyLabel}` : `${currencySymbol}0.00 ${currencyLabel}`;
+            weightDisplay.textContent = modelVolume > 0 && selectedMaterial ? `${weightKg.toFixed(2)} kg` : '0.00 kg';
+            shippingDisplay.textContent = modelVolume > 0 && selectedMaterial ? `${currencySymbol}${shippingCost.toFixed(2)} ${currencyLabel}` : `${currencySymbol}0.00 ${currencyLabel}`;
         }
 
         // Calculate volume of a mesh
@@ -1177,4 +1240,3 @@
     </script>
 </body>
 </html>
-```
