@@ -3,17 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotizador 3D México</title>
+    <title>Cotizador 3D México - GitHub Pages OK</title>
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:Arial,sans-serif;background:#0a0a0a;color:#ddd;height:100vh;overflow:hidden;position:relative}
 
-        /* SOLUCIÓN DEFINITIVA */
-        #viewer-container canvas { pointer-events: none !important; }
-        #add-current-btn { pointer-events: auto !important; }  /* ← ESTA LÍNEA */
-        #cart-toggle { pointer-events: auto !important; }       /* ← Y ESTA OTRA */
+        #viewer-container {
+            position: relative;
+            flex: 1;
+            background: #111;
+            overflow: hidden;
+        }
+
+        /* Permitir interacción con el canvas, pero botones encima */
+        #viewer-container canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+        }
+
+        #controls-bar, #add-current-btn, #cart-toggle {
+            position: relative;
+            z-index: 1000;
+        }
 
         #initial-screen{position:absolute;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:1000}
         #initial-upload-btn{background:#f28c38;color:white;padding:20px 45px;border:none;border-radius:12px;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 10px 30px rgba(242,140,56,.5);transition:all .3s}
@@ -27,10 +41,10 @@
         .header-left{padding:10px;background:#f28c38;color:white;text-align:center;font-weight:bold;font-size:16px;border-radius:8px 8px 0 0;margin:-14px -14px 16px -14px}
         label{margin:10px 0 4px;color:#f28c38;font-weight:bold;font-size:13px}
         select,input[type=number]{width:100%;padding:7px;border-radius:6px;border:none;background:#222;color:white;font-size:12.5px;margin-bottom:8px}
-        .material-grid,.post-grid{gap:5px;margin:8px 0}
-        .material-btn,.post-btn{padding:8px;background:#333;border:none;border-radius:6px;color:white;cursor:pointer;font-size:11.8px;transition:all .2s}
-        .material-btn:hover,.post-btn:hover{background:#f28c38}
-        .material-btn.selected,.post-btn.selected{background:#f28c38;font-weight:bold}
+        .material-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+        .material-btn,.post-btn{padding:9px;background:#333;border:none;border-radius:6px;color:white;cursor:pointer;font-size:11.8px;transition:all .2s}
+        .material-btn:hover,.post-btn:hover,.material-btn.selected,.post-btn.selected{background:#f28c38;font-weight:bold}
+        .post-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin:8px 0}
         .price-box{background:#222;padding:12px;border-radius:8px;border:2px solid #f28c38;margin-top:16px;font-size:13px}
         .price-line{display:flex;justify-content:space-between;margin:6px 0}
         .price-total{font-size:17px!important;color:#f28c38!important;font-weight:bold;border-top:1px solid #444;padding-top:8px}
@@ -41,13 +55,11 @@
         #analysis-btn{background:#007bff}
         #xray-btn{background:#ff6b35}
         #analysis-btn.active,#xray-btn.active{background:#28a745}
-        #analysis-btn:hover{background:#0056b3}
-        #xray-btn:hover{background:#e55a2b}
 
         #loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.9);padding:18px 40px;border-radius:12px;font-size:15px;border:2px solid #f28c38;color:#f28c38;display:none;z-index:1000}
         #loading-msg.active{display:block}
 
-        #file-info-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(26,26,26,.98);padding:12px 16px;border-top:4px solid #f28c38;z-index:10;display:none;backdrop-filter:blur(12px);font-size:13px;line-height:1.5}
+        #file-info-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(26,26,26,.98);padding:12px 16px;border-top:4px solid #f28c38;z-index:10;display:none;font-size:13px;line-height:1.5}
         #file-info-panel.visible{display:block}
         #file-name-info{color:#f28c38;font-weight:bold;font-size:15px;margin-bottom:6px}
 
@@ -57,8 +69,15 @@
         #cart-panel{position:absolute;top:0;right:0;width:340px;height:100%;background:#111;border-left:3px solid #28a745;padding:16px;overflow-y:auto;z-index:90;transform:translateX(100%);transition:transform .4s ease}
         #cart-panel.active{transform:translateX(0)}
         .cart-header{background:#28a745;color:white;padding:10px;text-align:center;font-size:16px;font-weight:bold;border-radius:8px}
-        .cart-item{background:#1e1e1e;padding:10px;margin:8px 0;border-radius:8px;font-size:12.5px;position:relative}
+        .cart-item{background:#1e1e1e;padding:12px;margin:8px 0;border-radius:8px;position:relative;font-size:12.5px}
         .delete-item{position:absolute;top:6px;right:6px;background:#dc3545;color:white;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
+        .qty-controls{margin-top:8px;display:flex;gap:8px;align-items:center;justify-content:center}
+        .qty-controls button{width:28px;height:28px;background:#444;color:white;border:none;border-radius:50%;cursor:pointer;font-size:16px}
+        .qty-controls button:hover{background:#f28c38}
+
+        #cart-summary{background:#28a745;color:white;padding:16px;border-radius:10px;margin-top:16px;text-align:center;font-size:16px}
+        .cart-final{font-size:26px!important;font-weight:bold;margin-top:10px}
+        #checkout-btn{background:#0066ff;color:white;padding:16px;border:none;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;width:100%;margin-top:14px}
 
         #cart-toggle{position:fixed;top:18px;right:18px;background:#28a745;color:white;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;z-index:999;cursor:pointer;box-shadow:0 10px 30px rgba(40,167,69,.7)}
         #cart-toggle:hover{transform:scale(1.1)}
@@ -68,7 +87,7 @@
     </style>
 </head>
 <body>
-    <!-- TODO IGUAL QUE ANTES -->
+
     <div id="initial-screen">
         <button id="initial-upload-btn">Subir STL</button>
         <input type="file" id="input-initial" accept=".stl,.STL">
@@ -125,72 +144,221 @@
             </div>
 
             <div id="cart-panel">
-                <div class="cart-header">RESUMEN</div>
+                <div class="cart-header">RESUMEN DEL PEDIDO</div>
                 <div id="cart-items"></div>
-                <div style="background:#28a745;color:white;padding:16px;border-radius:10px;margin-top:16px;text-align:center">
-                    <div>Costo piezas: <strong id="subtotal">$0.00</strong></div>
-                    <div>Envío: <strong>$280</strong></div>
-                    <div style="font-size:26px;font-weight:bold;margin-top:10px">TOTAL: <strong id="total-carrito">$280</strong></div>
+                <div id="cart-summary">
+                    <div>Subtotal piezas: <strong id="subtotal">$0.00</strong></div>
+                    <div>Peso total: <strong id="total-weight">0.000 kg</strong></div>
+                    <div>Envío: <strong id="envio">$280</strong></div>
+                    <div class="cart-final">TOTAL: <strong id="total-carrito">$280</strong></div>
                 </div>
-                <button id="checkout-btn" style="background:#0066ff;color:white;padding:16px;border:none;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;width:100%;margin-top:14px">Checkout</button>
+                <button id="checkout-btn">CHECKOUT</button>
             </div>
         </div>
         
         <button id="add-current-btn">Añadir al Carrito</button>
-        
         <div id="cart-toggle">
             <i class="fas fa-shopping-cart"></i>
             <span class="badge">0</span>
         </div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
+    <!-- USAMOS VERSIÓN MÁS NUEVA Y SEGURA DE THREE.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.168.0/examples/js/controls/OrbitControls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.168.0/examples/js/loaders/STLLoader.min.js"></script>
 
     <script>
         const MATERIALS = {fdm:[{name:"PLA",price:0.394,density:1.24},{name:"ABS",price:0.498,density:1.04},{name:"ASA",price:0.595,density:1.07},{name:"PETG",price:0.55,density:1.27},{name:"TPU",price:0.78,density:1.21},{name:"PA12-CF",price:1.45,density:1.10}],sla:[{name:"Estándar",price:0.196,density:1.15},{name:"Negra",price:0.368,density:1.18},{name:"Gris",price:0.400,density:1.18},{name:"Transparente",price:0.45,density:1.16},{name:"Flexible",price:0.68,density:1.10},{name:"Alta Temp",price:0.85,density:1.17}],mjf:[{name:"PA12 Negro",price:1.25,density:1.01},{name:"PA12 Gris",price:1.18,density:1.01},{name:"PAC-HP",price:5.50,density:1.02}],sls:[{name:"PA12",price:0.95,density:1.00},{name:"PA12 Pro",price:1.15,density:1.00},{name:"TPU",price:1.40,density:1.00}],slm:[{name:"316L",price:8.90,density:7.98},{name:"Titanio",price:18.50,density:4.43},{name:"Aluminio",price:12.80,density:2.67}],wjp:[{name:"Full Color",price:4.80,density:1.20}],bj:[{name:"316L BJ",price:9.80,density:7.98}]};
 
-        let scene,camera,renderer,controls,model,volume=0,fileName="",mat=MATERIALS.fdm[0];
-        let currentDims={x:0,y:0,z:0}, currentVol=0, currentWeight=0;
-        let cart=JSON.parse(localStorage.getItem('cart3d')||'[]');
-        let boundingBoxHelper=null, dimensionLabels=[], isXray=false, originalMaterial=null;
+        let scene, camera, renderer, controls, model, volume = 0, fileName = "", mat = MATERIALS.fdm[0];
+        let currentDims = {x:0,y:0,z:0}, currentVol = 0, currentWeight = 0;
+        let cart = JSON.parse(localStorage.getItem('cart3d') || '[]');
+        let boundingBoxHelper = null, isXray = false, originalMaterial = null;
 
-        const $ = s=>document.querySelector(s);
+        const $ = s => document.querySelector(s);
 
-        function init3D(){
-            scene=new THREE.Scene(); scene.background=new THREE.Color(0x111111);
-            camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,1000);
-            renderer=new THREE.WebGLRenderer({antialias:true});
-            renderer.setSize(window.innerWidth,window.innerHeight);
-            renderer.setPixelRatio(devicePixelRatio);
+        function init3D() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111111);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+            renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             $('#viewer-container').appendChild(renderer.domElement);
 
-            scene.add(new THREE.HemisphereLight(0xffffff,0x444466,1.5));
-            scene.add(new THREE.DirectionalLight(0xffffff,1).position.set(5,10,7));
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(5, 10, 7);
+            scene.add(dirLight);
 
-            controls=new THREE.OrbitControls(camera,renderer.domElement);
-            controls.enableDamping=true;
-            camera.position.set(0,0,150);
+            controls = new THREE.OrbitControls(camera, $('#viewer-container'));
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.rotateSpeed = 1.0;
+            controls.zoomSpeed = 1.2;
+            controls.panSpeed = 0.8;
+            camera.position.set(0, 50, 200);
+            controls.target.set(0, 0, 0);
+            controls.update();
 
-            function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                if (boundingBoxHelper) boundingBoxHelper.update();
+                renderer.render(scene, camera);
+            }
             animate();
 
-            window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
         }
         init3D();
 
+        // SUBIR ARCHIVO
         $('#initial-upload-btn').onclick = () => $('#input-initial').click();
         $('#upload-btn').onclick = () => $('#input-viewer').click();
+        $('#input-initial').addEventListener('change', e => e.target.files[0] && loadModel(e.target.files[0]));
+        $('#input-viewer').addEventListener('change', e => e.target.files[0] && loadModel(e.target.files[0]));
 
-        // ... (todo el resto del código igual que antes hasta el final) ...
+        function loadModel(file) {
+            if (!file || !/\.stl$/i.test(file.name)) return alert("Solo archivos .STL");
+            fileName = file.name;
+            $('#loading-msg').classList.add('active');
+            $('#main-app').classList.add('active');
+            $('#initial-screen').style.display = 'none';
 
-        // AÑADIR AL CARRITO - AHORA SÍ FUNCIONA 100%
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const loader = new THREE.STLLoader();
+                    const geometry = loader.parse(e.target.result);
+                    geometry.center(); // Centrado automático
+                    const material = new THREE.MeshPhongMaterial({color: 0xaaaaaa, shininess: 100});
+                    const mesh = new THREE.Mesh(geometry, material);
+
+                    if (model) scene.remove(model);
+                    if (boundingBoxHelper) { scene.remove(boundingBoxHelper); boundingBoxHelper = null; }
+                    if (isXray) { isXray = false; $('#xray-btn').classList.remove('active'); $('#xray-btn').textContent = "Rayos X"; }
+
+                    scene.add(mesh);
+                    model = mesh;
+                    originalMaterial = material;
+
+                    const box = new THREE.Box3().setFromObject(mesh);
+                    const size = box.getSize(new THREE.Vector3());
+                    const maxDim = Math.max(size.x, size.y, size.z);
+
+                    // Posición inicial buena para GitHub Pages
+                    camera.position.set(maxDim * 0.5, maxDim * 0.5, maxDim * 2);
+                    controls.target.set(0, 0, 0);
+                    controls.update();
+
+                    volume = (size.x * size.y * size.z) / 1000;
+                    currentDims = {x: size.x.toFixed(1), y: size.y.toFixed(1), z: size.z.toFixed(1)};
+                    currentVol = volume.toFixed(2);
+                    currentWeight = (volume * mat.density / 1000).toFixed(3);
+
+                    $('#file-name-info').textContent = fileName;
+                    $('#dim-x').textContent = currentDims.x + ' mm';
+                    $('#dim-y').textContent = currentDims.y + ' mm';
+                    $('#dim-z').textContent = currentDims.z + ' mm';
+                    $('#volume-info').textContent = currentVol + ' cm³';
+                    $('#file-info-panel').classList.add('visible');
+                    $('#add-current-btn').classList.add('visible');
+                    $('#loading-msg').classList.remove('active');
+
+                    renderMaterials();
+                    calc();
+                } catch(err) {
+                    console.error(err);
+                    $('#loading-msg').classList.remove('active');
+                    alert("Error al cargar el STL");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function renderMaterials() {
+            const tech = $('#tech-select').value;
+            const cont = $('#material-container');
+            cont.innerHTML = '';
+            MATERIALS[tech].forEach((m, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'material-btn';
+                if (i === 0) btn.classList.add('selected');
+                btn.textContent = m.name;
+                btn.onclick = () => {
+                    cont.querySelectorAll('.material-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    mat = m;
+                    calc();
+                };
+                cont.appendChild(btn);
+            });
+            mat = MATERIALS[tech][0];
+            calc();
+        }
+
+        function calc() {
+            if (!volume) return;
+            const qty = parseInt($('#quantity').value) || 1;
+            const post = parseFloat(document.querySelector('.post-btn.selected')?.dataset.cost || 0);
+            const weightKg = (volume * mat.density) / 1000;
+            const cost = (weightKg * mat.price * 1000 + post) * qty;
+            $('#weight').textContent = (weightKg * qty).toFixed(3) + ' kg';
+            $('#piece-cost').textContent = '$' + cost.toFixed(2);
+        }
+
+        // ANÁLISIS Y RAYOS X CORREGIDOS
+        $('#analysis-btn').onclick = () => {
+            if (!model) return;
+            if (boundingBoxHelper) {
+                scene.remove(boundingBoxHelper);
+                boundingBoxHelper = null;
+                $('#analysis-btn').classList.remove('active');
+                $('#analysis-btn').textContent = "Análisis";
+            } else {
+                boundingBoxHelper = new THREE.BoxHelper(model, 0xffff00);
+                scene.add(boundingBoxHelper);
+                boundingBoxHelper.update();
+                $('#analysis-btn').classList.add('active');
+                $('#analysis-btn').textContent = "Quitar Análisis";
+            }
+        };
+
+        $('#xray-btn').onclick = () => {
+            if (!model) return;
+            if (isXray) {
+                model.material = originalMaterial;
+                model.material.needsUpdate = true;
+                $('#xray-btn').classList.remove('active');
+                $('#xray-btn').textContent = "Rayos X";
+                isXray = false;
+            } else {
+                originalMaterial = model.material.clone();
+                model.material = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    wireframe: true,
+                    transparent: true,
+                    opacity: 0.7
+                });
+                model.material.needsUpdate = true;
+                $('#xray-btn').classList.add('active');
+                $('#xray-btn').textContent = "Normal";
+                isXray = true;
+            }
+        };
+
         $('#add-current-btn').onclick = () => {
             if (!volume) return alert("Primero carga un STL");
             const qty = parseInt($('#quantity').value) || 1;
             const post = document.querySelector('.post-btn.selected').textContent;
-            const pieceCost = parseFloat($('#piece-cost').textContent.replace(/[^0-9.]/g,''));
+            const pieceCost = parseFloat($('#piece-cost').textContent.replace(/[^0-9.]/g, ''));
 
             cart.push({
                 archivo: fileName,
@@ -208,150 +376,76 @@
             alert(`${qty} pieza(s) agregadas al carrito`);
         };
 
-        // ... resto del código igual (updateCart, calc, etc.) ...
-        // (para no hacer el mensaje eterno, el resto es idéntico al anterior)
-
-        function updateCart(){
-            const items=$('#cart-items');
-            const badge=$('#cart-toggle .badge');
-            if(cart.length===0){
-                items.innerHTML="<p style='text-align:center;color:#888;padding:40px 0;font-size:13px'>Carrito vacío</p>";
-                $('#subtotal').textContent="$0.00";
-                $('#total-carrito').textContent="$280";
-            }else{
-                let subtotal=cart.reduce((s,i)=>s+i.precio,0);
-                items.innerHTML=cart.map((item,i)=>`
-                    <div class="cart-item">
-                        <div class="delete-item" onclick="removeFromCart(${i})">X</div>
-                        <strong>${item.cantidad} × ${item.archivo}</strong><br>
-                        ${item.material} • ${item.post}<br>
-                        <div style="font-size:11px;color:#aaa;margin-top:4px">
-                            ${item.dims.x}×${item.dims.y}×${item.dims.z} mm • ${item.vol} cm³
-                        </div>
-                        <strong style="color:#28a745">$${item.precio.toFixed(2)}</strong>
-                    </div>
-                `).join('');
-                $('#subtotal').textContent='$'+subtotal.toFixed(2);
-                $('#total-carrito').textContent='$'+(subtotal+280).toFixed(2);
+        function updateCart() {
+            const items = $('#cart-items');
+            const badge = $('#cart-toggle .badge');
+            if (cart.length === 0) {
+                items.innerHTML = "<p style='text-align:center;color:#888;padding:60px 0'>Carrito vacío</p>";
+                $('#subtotal').textContent = "$0.00";
+                $('#total-weight').textContent = "0.000 kg";
+                $('#envio').textContent = "$280";
+                $('#total-carrito').textContent = "$280";
+                badge.textContent = "0";
+                return;
             }
-            badge.textContent=cart.reduce((s,i)=>s+i.cantidad,0);
+
+            let subtotal = 0, totalWeight = 0;
+            items.innerHTML = cart.map((item, i) => {
+                const itemWeight = parseFloat(item.weight) * item.cantidad;
+                totalWeight += itemWeight;
+                subtotal += item.precio;
+
+                return `<div class="cart-item">
+                    <div class="delete-item" onclick="removeFromCart(${i})">X</div>
+                    <strong>${item.cantidad} × ${item.archivo}</strong><br>
+                    ${item.material} • ${item.post}<br>
+                    <small>${item.dims.x}×${item.dims.y}×${item.dims.z} mm • ${itemWeight.toFixed(3)} kg</small>
+                    <div class="qty-controls">
+                        <button onclick="changeQty(${i},-1)">-</button>
+                        <strong>${item.cantidad}</strong>
+                        <button onclick="changeQty(${i},1)">+</button>
+                    </div>
+                    <strong style="color:#28a745;float:right">$${item.precio.toFixed(2)}</strong>
+                </div>`;
+            }).join('');
+
+            const envio = totalWeight > 10 ? 950 : (totalWeight > 5 ? 680 : (totalWeight > 1 ? 450 : 280));
+            $('#total-weight').textContent = totalWeight.toFixed(3) + " kg";
+            $('#subtotal').textContent = "$" + subtotal.toFixed(2);
+            $('#envio').textContent = "$" + envio;
+            $('#total-carrito').textContent = "$" + (subtotal + envio).toFixed(2);
+            badge.textContent = cart.reduce((s, x) => s + x.cantidad, 0);
         }
 
-        window.removeFromCart=i=>{cart.splice(i,1);localStorage.setItem('cart3d',JSON.stringify(cart));updateCart();};
+        window.changeQty = (i, delta) => {
+            cart[i].cantidad = Math.max(1, cart[i].cantidad + delta);
+            cart[i].precio = cart[i].basePrice * cart[i].cantidad;
+            localStorage.setItem('cart3d', JSON.stringify(cart));
+            updateCart();
+        };
 
-        $('#checkout-btn').onclick=()=>{if(cart.length===0)return alert("Carrito vacío");window.location.href="https://tudominio.com/checkout";};
-        $('#cart-toggle').onclick=()=>$('#cart-panel').classList.toggle('active');
+        window.removeFromCart = i => {
+            cart.splice(i, 1);
+            localStorage.setItem('cart3d', JSON.stringify(cart));
+            updateCart();
+        };
 
-        $('#tech-select').onchange=()=>{renderMaterials();};
-        $('#quantity').oninput=calc;
-        document.querySelectorAll('.post-btn').forEach(btn=>{
-            btn.onclick=()=>{document.querySelectorAll('.post-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');calc();}
+        $('#checkout-btn').onclick = () => {
+            if (cart.length === 0) return alert("El carrito está vacío");
+            alert("Redirigiendo al checkout... (aquí puedes conectar Stripe, PayPal o tu página de pago)");
+            // Ejemplo: window.location.href = "https://tu-sitio.com/checkout";
+        };
+
+        $('#cart-toggle').onclick = () => $('#cart-panel').classList.toggle('active');
+        $('#tech-select').onchange = renderMaterials;
+        $('#quantity').oninput = calc;
+        document.querySelectorAll('.post-btn').forEach(b => b.onclick = () => {
+            document.querySelectorAll('.post-btn').forEach(x => x.classList.remove('selected'));
+            b.classList.add('selected');
+            calc();
         });
 
-        function renderMaterials(){
-            const tech=$('#tech-select').value;
-            const cont=$('#material-container');
-            cont.innerHTML='';
-            MATERIALS[tech].forEach((m,i)=>{
-                const b=document.createElement('button');
-                b.className='material-btn'; if(i===0) b.classList.add('selected');
-                b.textContent=m.name;
-                b.onclick=()=>{cont.querySelectorAll('.material-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');mat=m;calc();};
-                cont.appendChild(b);
-            });
-            mat=MATERIALS[tech][0]; calc();
-        }
-
-        function calc(){
-            if(!volume) return;
-            const qty=parseInt($('#quantity').value)||1;
-            const post=parseFloat(document.querySelector('.post-btn.selected')?.dataset.cost||0);
-            const realWeightKg = (volume * mat.density) / 1000;
-            const pieceCost = (realWeightKg * mat.price * 1000 + post) * qty;
-            $('#weight').textContent=(realWeightKg * qty).toFixed(3)+' kg';
-            $('#piece-cost').textContent='$'+pieceCost.toFixed(2);
-        }
-
-        function loadModel(file){
-            if(!file||!/\.stl$/i.test(file.name)) return;
-            fileName=file.name;
-            $('#loading-msg').classList.add('active');
-            $('#main-app').classList.add('active');
-            $('#initial-screen').style.display='none';
-
-            const reader=new FileReader();
-            reader.onload=e=>{
-                try{
-                    const loader=new THREE.STLLoader();
-                    const geom=loader.parse(e.target.result);
-                    const mesh=new THREE.Mesh(geom,new THREE.MeshPhongMaterial({color:0xaaaaaa,shininess:100}));
-                    if(model) scene.remove(model);
-                    if(boundingBoxHelper){scene.remove(boundingBoxHelper);boundingBoxHelper=null;}
-                    dimensionLabels.forEach(l=>scene.remove(l)); dimensionLabels=[];
-                    scene.add(mesh); model=mesh;
-
-                    const box=new THREE.Box3().setFromObject(mesh);
-                    const size=box.getSize(new THREE.Vector3());
-                    const max=Math.max(size.x,size.y,size.z);
-                    mesh.scale.multiplyScalar(90/max);
-                    const center=box.getCenter(new THREE.Vector3());
-                    mesh.position.sub(center);
-                    camera.position.set(0,max*0.6,max*3);
-                    controls.target.set(0,0,0);
-                    controls.update();
-
-                    volume = (size.x * size.y * size.z) / 1000;
-                    currentDims = {x:size.x.toFixed(1), y:size.y.toFixed(1), z:size.z.toFixed(1)};
-                    currentVol = volume.toFixed(2);
-                    currentWeight = (volume * mat.density / 1000).toFixed(3);
-
-                    $('#file-name-info').textContent=fileName;
-                    $('#dim-x').textContent=currentDims.x+' mm';
-                    $('#dim-y').textContent=currentDims.y+' mm';
-                    $('#dim-z').textContent=currentDims.z+' mm';
-                    $('#volume-info').textContent=currentVol+' cm³';
-                    $('#file-info-panel').classList.add('visible');
-                    $('#add-current-btn').classList.add('visible');
-                    $('#loading-msg').classList.remove('active');
-                    renderMaterials();
-                    calc();
-                }catch(err){
-                    $('#loading-msg').classList.remove('active');
-                    alert("Error al cargar STL");
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
-
-        $('#input-initial').addEventListener('change', e=>e.target.files[0]&&loadModel(e.target.files[0]));
-        $('#input-viewer').addEventListener('change', e=>e.target.files[0]&&loadModel(e.target.files[0]));
-
-        $('#analysis-btn').onclick = () => { /* mismo código de análisis que antes */ 
-            if(!model) return;
-            if(boundingBoxHelper){
-                scene.remove(boundingBoxHelper); dimensionLabels.forEach(l=>scene.remove(l)); dimensionLabels=[]; boundingBoxHelper=null;
-                $('#analysis-btn').classList.remove('active'); $('#analysis-btn').textContent="Análisis";
-            }else{
-                const box = new THREE.Box3().setFromObject(model);
-                boundingBoxHelper = new THREE.BoxHelper(model, 0xffff00); scene.add(boundingBoxHelper);
-                $('#analysis-btn').classList.add('active'); $('#analysis-btn').textContent="Quitar Análisis";
-            }
-        };
-
-        $('#xray-btn').onclick = () => {
-            if(!model) return;
-            if(isXray){
-                model.material = originalMaterial;
-                $('#xray-btn').classList.remove('active'); $('#xray-btn').textContent = "Rayos X";
-                isXray = false;
-            }else{
-                originalMaterial = model.material;
-                model.material = new THREE.MeshBasicMaterial({color:0xaaaaaa,wireframe:true,transparent:true,opacity:0.6});
-                $('#xray-btn').classList.add('active'); $('#xray-btn').textContent = "Normal";
-                isXray = true;
-            }
-        };
-
+        renderMaterials();
         updateCart();
     </script>
 </body>
