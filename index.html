@@ -3,428 +3,492 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotizador 3D México - 100% FUNCIONAL</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+    <title>Cotizador 3D México - Versión Estable</title>
+    <link rel="icon" href="data:,">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
         body{font-family:Arial,sans-serif;background:#0a0a0a;color:#ddd;height:100vh;overflow:hidden;position:relative}
-        
+       
         #initial-screen{position:fixed;inset:0;background:#000;display:flex;align-items:center;justify-content:center;z-index:1000}
-        #initial-upload-btn{background:#f28c38;color:white;padding:20px 45px;border:none;border-radius:12px;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 10px 30px rgba(242,140,56,.5);transition:all .3s;position:relative;z-index:10}
+        #initial-upload-btn{background:#f28c38;color:white;padding:20px 45px;border:none;border-radius:12px;font-size:20px;font-weight:bold;cursor:pointer;box-shadow:0 10px 30px rgba(242,140,56,.5);transition:all .3s}
         #initial-upload-btn:hover{background:#e67e22;transform:scale(1.05)}
-        
+       
         #main-app{display:none;height:100vh;flex-direction:column}
         #main-app.active{display:flex}
         #top-panel{display:flex;flex:1;position:relative}
-        
+       
         #left-panel{width:300px;background:#111;padding:14px;font-size:12.5px;overflow-y:auto;border-right:2px solid #f28c38}
         .header-left{padding:10px;background:#f28c38;color:white;text-align:center;font-weight:bold;font-size:16px;border-radius:8px 8px 0 0;margin:-14px -14px 16px -14px}
         label{margin:10px 0 4px;color:#f28c38;font-weight:bold;font-size:13px}
         select,input[type=number]{width:100%;padding:7px;border-radius:6px;border:none;background:#222;color:white;font-size:12.5px;margin-bottom:8px}
-        .material-grid,.post-grid{gap:5px;margin:8px 0}
-        .material-btn,.post-btn{padding:8px;background:#333;border:none;border-radius:6px;color:white;cursor:pointer;font-size:11.8px;transition:all .2s}
-        .material-btn:hover,.post-btn:hover{background:#f28c38}
-        .material-btn.selected,.post-btn.selected{background:#f28c38;font-weight:bold}
+        .material-grid,.post-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+        .material-btn,.post-btn{padding:9px;background:#333;border:none;border-radius:6px;color:white;cursor:pointer;font-size:12px;transition:all .2s}
+        .material-btn:hover,.post-btn:hover,.material-btn.selected,.post-btn.selected{background:#f28c38;font-weight:bold}
+       
         .price-box{background:#222;padding:12px;border-radius:8px;border:2px solid #f28c38;margin-top:16px;font-size:13px}
         .price-line{display:flex;justify-content:space-between;margin:6px 0}
         .price-total{font-size:17px!important;color:#f28c38!important;font-weight:bold;border-top:1px solid #444;padding-top:8px}
-        
-        #viewer-container{flex:1;background:#111;position:relative;overflow:hidden}
-        /* BOTONES SOBRE EL CANVAS - AHORA IMPOSIBLE QUE NO FUNCIONEN */
-        #controls-bar{
-            position:absolute;top:14px;left:14px;z-index:9999;display:flex;gap:10px;
-            pointer-events:auto !important;
-        }
-        #controls-bar button{
-            padding:10px 20px;background:#f28c38;color:white;border:none;
-            border-radius:8px;font-size:13px;cursor:pointer;transition:all .3s;
-            pointer-events:auto !important;box-shadow:0 4px 15px rgba(0,0,0,.6);
-        }
+       
+        #viewer-container{flex:1;background:#111;position:relative;overflow:hidden;transition:width 0.4s ease}
+        #viewer-container.shrinked { width: calc(100% - 340px); }
+       
+        #controls-bar{position:absolute;top:14px;left:14px;z-index:9999;display:flex;gap:10px}
+        #controls-bar button{padding:10px 20px;background:#f28c38;color:white;border:none;border-radius:8px;font-size:13px;cursor:pointer;transition:all .3s}
         #analysis-btn{background:#007bff}
         #xray-btn{background:#ff6b35}
         #analysis-btn.active,#xray-btn.active{background:#28a745}
-        #analysis-btn:hover{background:#0056b3}
-        #xray-btn:hover{background:#e55a2b}
-        
+       
         #loading-msg{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.9);padding:18px 40px;border-radius:12px;font-size:15px;border:2px solid #f28c38;color:#f28c38;display:none;z-index:1000}
         #loading-msg.active{display:block}
-        
-        #file-info-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(26,26,26,.98);padding:12px 16px;border-top:4px solid #f28c38;z-index:10;display:none;backdrop-filter:blur(12px);font-size:13px;line-height:1.5}
+       
+        #file-info-panel{position:absolute;bottom:0;left:0;right:0;background:rgba(26,26,26,.98);padding:12px 16px;border-top:4px solid #f28c38;z-index:10;display:none;font-size:13px;line-height:1.5}
         #file-info-panel.visible{display:block}
         #file-name-info{color:#f28c38;font-weight:bold;font-size:15px;margin-bottom:6px}
-        .file-info-list{margin:0;padding:0;list-style:none;color:#aaa}
-        .file-info-list li{display:flex;justify-content:space-between;margin:4px 0}
-        .file-info-list strong{color:#f28c38}
-        
+       
         #add-current-btn{position:fixed;bottom:18px;left:18px;background:#28a745;color:white;padding:14px 32px;border:none;border-radius:50px;font-size:16px;font-weight:bold;cursor:pointer;z-index:9999;box-shadow:0 8px 25px rgba(40,167,69,.7);display:none}
         #add-current-btn.visible{display:block}
-        
+       
         #cart-panel{position:absolute;top:0;right:0;width:340px;height:100%;background:#111;border-left:3px solid #28a745;padding:16px;overflow-y:auto;z-index:90;transform:translateX(100%);transition:transform .4s ease}
         #cart-panel.active{transform:translateX(0)}
         .cart-header{background:#28a745;color:white;padding:10px;text-align:center;font-size:16px;font-weight:bold;border-radius:8px}
-        .cart-item{background:#1e1e1e;padding:10px;margin:8px 0;border-radius:8px;font-size:12.5px;position:relative}
+        .cart-item{background:#1e1e1e;padding:12px;margin:8px 0;border-radius:8px;position:relative;font-size:12.5px}
         .delete-item{position:absolute;top:6px;right:6px;background:#dc3545;color:white;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center}
-        .cart-item-controls{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:6px}
-        .cart-item-controls button{background:#444;color:white;border:none;width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:14px}
-        .cart-item-controls button:hover{background:#f28c38}
-        .cart-item-details{font-size:11px;color:#aaa;margin-top:4px}
         
-        .cart-summary{background:#28a745;color:white;padding:16px;border-radius:10px;margin-top:16px;text-align:center;font-size:16px}
-        .cart-summary-line{margin:8px 0}
-        .cart-final{font-size:26px!important;font-weight:bold;margin-top:10px}
+        .qty-controls{display:flex;align-items:center;gap:8px;margin-top:8px}
+        .qty-controls button{width:28px;height:28px;background:#444;color:white;border:none;border-radius:50%;cursor:pointer;font-size:16px}
+        .qty-controls button:hover{background:#f28c38}
         
-        #checkout-btn{background:#0066ff;color:white;padding:16px;border:none;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;width:100%;margin-top:14px;box-shadow:0 8px 25px rgba(0,102,255,.5);transition:all .3s}
-        #checkout-btn:hover{background:#0052cc;transform:scale(1.02)}
-        
-        #cart-toggle{position:fixed;top:18px;right:18px;background:#28a745;color:white;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;z-index:9999;cursor:pointer;box-shadow:0 10px 30px rgba(40,167,69,.7);transition:all .3s}
-        #cart-toggle:hover{transform:scale(1.1)}
+        #cart-toggle{position:fixed;top:18px;right:18px;background:#28a745;color:white;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;z-index:9999;cursor:pointer;box-shadow:0 10px 30px rgba(40,167,69,.7)}
         #cart-toggle .badge{position:absolute;top:-8px;right:-8px;background:#dc3545;color:white;width:28px;height:28px;border-radius:50%;font-size:13px;font-weight:bold;display:flex;align-items:center;justify-content:center}
-        
+       
+        #checkout-btn{
+            background:#28a745;color:white;padding:16px;border:none;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;width:100%;margin-top:20px;
+            box-shadow:0 8px 25px rgba(40,167,69,.7);transition:all .3s;
+        }
+        #checkout-btn:hover{background:#218838;transform:scale(1.03)}
+       
         input[type="file"]{display:none}
     </style>
 </head>
 <body>
-    <div id="initial-screen">
-        <div style="position:relative">
-            <button id="initial-upload-btn">Subir STL</button>
-            <input type="file" id="input-initial" accept=".stl,.STL">
-        </div>
-    </div>
 
-    <div id="main-app">
-        <div id="top-panel">
-            <div id="left-panel">
-                <div class="header-left">COTIZADOR 3D MÉXICO</div>
-                
-                <label>Tecnología</label>
-                <select id="tech-select">
-                    <option value="fdm">FDM (Plástico)</option>
-                    <option value="sla">SLA (Resina)</option>
-                    <option value="mjf">MJF (Nylon HP)</option>
-                    <option value="sls">SLS (Nylon)</option>
-                    <option value="slm">SLM (Metal)</option>
-                    <option value="wjp">Full Color</option>
-                    <option value="bj">BJ (Metal)</option>
-                </select>
-                
-                <label>Material</label>
-                <div id="material-container" class="material-grid"></div>
-                
-                <label>Post-proceso</label>
-                <div class="post-grid">
-                    <button class="post-btn selected" data-cost="0">Ninguno</button>
-                    <button class="post-btn" data-cost="15">Pulido</button>
-                    <button class="post-btn" data-cost="25">Tinturado</button>
-                    <button class="post-btn" data-cost="35">Arenado</button>
-                </div>
-                
-                <label>Cantidad</label>
-                <input type="number" id="quantity" value="1" min="1">
-                
-                <div class="price-box">
-                    <div class="price-line"><span>Peso:</span> <span id="weight">0.000 kg</span></div>
-                    <div class="price-line price-total"><span>COSTO PIEZAS:</span> <span id="piece-cost">$0.00</span></div>
-                </div>
+<div id="initial-screen">
+    <button id="initial-upload-btn">Subir STL</button>
+    <input type="file" id="input-initial" accept=".stl,.STL">
+</div>
+
+<div id="main-app">
+    <div id="top-panel">
+        <div id="left-panel">
+            <div class="header-left">COTIZADOR 3D MÉXICO</div>
+            
+            <label>Tecnología</label>
+            <select id="tech-select">
+                <option value="fdm">FDM (Plástico)</option>
+                <option value="sla">SLA (Resina)</option>
+                <option value="mjf">MJF (Nylon HP)</option>
+                <option value="sls">SLS (Nylon)</option>
+                <option value="slm">SLM (Metal)</option>
+                <option value="wjp">Full Color</option>
+                <option value="bj">BJ (Metal)</option>
+            </select>
+            
+            <label>Material</label>
+            <div id="material-container" class="material-grid"></div>
+            
+            <label>Post-proceso</label>
+            <div class="post-grid">
+                <button class="post-btn selected" data-cost="0">Ninguno</button>
+                <button class="post-btn" data-cost="15">Pulido</button>
+                <button class="post-btn" data-cost="25">Tinturado</button>
+                <button class="post-btn" data-cost="35">Arenado</button>
             </div>
             
-            <div id="viewer-container">
-                <!-- BOTONES CON POINTER-EVENTS FORZADO -->
-                <div id="controls-bar">
-                    <button id="upload-btn">Cambiar STL</button>
-                    <button id="analysis-btn">Análisis</button>
-                    <button id="xray-btn">Rayos X</button>
-                </div>
-                
-                <div id="loading-msg">Cargando...</div>
-                
-                <div id="file-info-panel">
-                    <div id="file-name-info">Sin archivo</div>
-                    <ul class="file-info-list">
-                        <li>Ancho (X): <strong id="dim-x">0.0 mm</strong></li>
-                        <li>Profundidad (Y): <strong id="dim-y">0.0 mm</strong></li>
-                        <li>Altura (Z): <strong id="dim-z">0.0 mm</strong></li>
-                        <li>Volumen: <strong id="volume-info">0.00 cm³</strong></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div id="cart-panel">
-                <div class="cart-header">RESUMEN</div>
-                <div id="cart-items">
-                    <p style="text-align:center;color:#888;padding:40px 0;font-size:13px">Carrito vacío</p>
-                </div>
-                
-                <div class="cart-summary">
-                    <div class="cart-summary-line">Costo por piezas: <strong id="subtotal">$0.00</strong></div>
-                    <div class="cart-summary-line">Costo de envío: <strong id="envio">$280</strong></div>
-                    <div class="cart-final">TOTAL: <strong id="total-carrito">$280</strong></div>
-                </div>
-                
-                <button id="checkout-btn">Checkout</button>
+            <label>Cantidad</label>
+            <input type="number" id="quantity" value="1" min="1">
+            
+            <label>Moneda</label>
+            <select id="currency">
+                <option value="usd">USD - Dólar Americano</option>
+                <option value="mxn" selected>MXN - Peso Mexicano</option>
+            </select>
+            
+            <div class="price-box">
+                <div class="price-line"><span>Peso:</span> <span id="weight">0.000 kg</span></div>
+                <div class="price-line price-total"><span>COSTO PIEZAS:</span> <span id="piece-cost">$0.00</span></div>
             </div>
         </div>
         
-        <button id="add-current-btn">Añadir al Carrito</button>
+        <div id="viewer-container">
+            <div id="controls-bar">
+                <button id="upload-btn">Cambiar STL</button>
+                <button id="analysis-btn">Análisis</button>
+                <button id="xray-btn">Rayos X</button>
+            </div>
+            <input type="file" id="input-viewer" accept=".stl,.STL">
+            <div id="loading-msg">Cargando...</div>
+            
+            <div id="file-info-panel">
+                <div id="file-name-info">Sin archivo</div>
+                <ul class="file-info-list">
+                    <li>Ancho (X): <strong id="dim-x">0.0 mm</strong></li>
+                    <li>Profundidad (Y): <strong id="dim-y">0.0 mm</strong></li>
+                    <li>Altura (Z): <strong id="dim-z">0.0 mm</strong></li>
+                    <li>Volumen: <strong id="volume-info">0.00 cm³</strong></li>
+                </ul>
+            </div>
+        </div>
         
-        <div id="cart-toggle">
-            <i class="fas fa-shopping-cart"></i>
-            <span class="badge">0</span>
+        <div id="cart-panel">
+            <div class="cart-header">RESUMEN DEL PEDIDO</div>
+            <div id="cart-items"></div>
+            <div class="cart-summary">
+                <div>Costo piezas: <strong id="subtotal">$0.00</strong></div>
+                <div>Envío: <strong id="envio">$280</strong></div>
+                <div class="cart-final">TOTAL: <strong id="total-carrito">$280</strong></div>
+            </div>
+            <button id="checkout-btn">CHECKOUT</button>
         </div>
     </div>
+    
+    <button id="add-current-btn">Añadir al Carrito</button>
+    
+    <div id="cart-toggle">
+        <i class="fas fa-shopping-cart"></i>
+        <span class="badge">0</span>
+    </div>
+</div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
 
-    <script>
-        const MATERIALS = {fdm:[{name:"PLA",price:0.394,density:1.24},{name:"ABS",price:0.498,density:1.04},{name:"ASA",price:0.595,density:1.07},{name:"PETG",price:0.55,density:1.27},{name:"TPU",price:0.78,density:1.21},{name:"PA12-CF",price:1.45,density:1.10}],sla:[{name:"Estándar",price:0.196,density:1.15},{name:"Negra",price:0.368,density:1.18},{name:"Gris",price:0.400,density:1.18},{name:"Transparente",price:0.45,density:1.16},{name:"Flexible",price:0.68,density:1.10},{name:"Alta Temp",price:0.85,density:1.17}],mjf:[{name:"PA12 Negro",price:1.25,density:1.01},{name:"PA12 Gris",price:1.18,density:1.01},{name:"PAC-HP",price:5.50,density:1.02}],sls:[{name:"PA12",price:0.95,density:1.00},{name:"PA12 Pro",price:1.15,density:1.00},{name:"TPU",price:1.40,density:1.00}],slm:[{name:"316L",price:8.90,density:7.98},{name:"Titanio",price:18.50,density:4.43},{name:"Aluminio",price:12.80,density:2.67}],wjp:[{name:"Full Color",price:4.80,density:1.20}],bj:[{name:"316L BJ",price:9.80,density:7.98}]};
+<script>
+// ==================== CONFIGURACIÓN ====================
+const MARGEN = 1.38;
+const EXCHANGE_RATE = 20;   // 1 USD = 20 MXN
 
-        let scene,camera,renderer,controls,model,volume=0,fileName="",mat=MATERIALS.fdm[0];
-        let cart=JSON.parse(localStorage.getItem('cart3d')||'[]');
-        let boundingBoxHelper=null, dimensionLabels=[], isXray=false, originalMaterial=null;
+const MATERIALS = {
+    fdm: [{name:"PLA",price:0.394*MARGEN,density:1.24},{name:"ABS",price:0.498*MARGEN,density:1.04},{name:"ASA",price:0.595*MARGEN,density:1.07},{name:"PETG",price:0.55*MARGEN,density:1.27},{name:"TPU",price:0.78*MARGEN,density:1.21},{name:"PA12-CF",price:1.45*MARGEN,density:1.10}],
+    sla: [{name:"Estándar",price:0.196*MARGEN,density:1.15},{name:"Negra",price:0.368*MARGEN,density:1.18},{name:"Gris",price:0.400*MARGEN,density:1.18},{name:"Transparente",price:0.45*MARGEN,density:1.16},{name:"Flexible",price:0.68*MARGEN,density:1.10},{name:"Alta Temp",price:0.85*MARGEN,density:1.17}],
+    mjf: [{name:"PA12 Negro",price:1.25*MARGEN,density:1.01},{name:"PA12 Gris",price:1.18*MARGEN,density:1.01},{name:"PAC-HP",price:5.50*MARGEN,density:1.02}],
+    sls: [{name:"PA12",price:0.95*MARGEN,density:1.00},{name:"PA12 Pro",price:1.15*MARGEN,density:1.00},{name:"TPU",price:1.40*MARGEN,density:1.00}],
+    slm: [
+        {name:"Acero Inox 316L",     price:0.090*MARGEN,density:7.98},
+        {name:"AlSi10Mg (Aluminio)", price:0.100*MARGEN,density:2.67},
+        {name:"Ti-6Al-4V (Titanio)", price:0.450*MARGEN,density:4.43}
+    ],
+    wjp: [{name:"Full Color",price:4.80*MARGEN,density:1.20}],
+    bj: [{name:"316L BJ",price:9.80*MARGEN,density:7.98}]
+};
 
-        const $ = s=>document.querySelector(s);
+let scene, camera, renderer, controls, model, volume = 0, fileName = "", mat = MATERIALS.fdm[0];
+let cart = [];
+let currentDims = {x:"0.0",y:"0.0",z:"0.0"}, currentVol = "0.00", currentWeight = "0.000";
+let currentCurrency = "mxn";
 
-        // INICIALIZAR VISOR
-        function init3D(){
-            scene=new THREE.Scene(); scene.background=new THREE.Color(0x111111);
-            camera=new THREE.PerspectiveCamera(60,window.innerWidth/window.innerHeight,0.1,1000);
-            renderer=new THREE.WebGLRenderer({antialias:true});
-            renderer.setSize(window.innerWidth,window.innerHeight);
-            renderer.setPixelRatio(devicePixelRatio);
-            $('#viewer-container').appendChild(renderer.domElement);
+const $ = s => document.querySelector(s);
+const viewerContainer = $('#viewer-container');
 
-            scene.add(new THREE.HemisphereLight(0xffffff,0x444466,1.5));
-            scene.add(new THREE.DirectionalLight(0xffffff,1).position.set(5,10,7));
+// ==================== VISOR 3D ====================
+function init3D(){
+    scene = new THREE.Scene(); scene.background = new THREE.Color(0x111111);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    viewerContainer.appendChild(renderer.domElement);
+    
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    scene.add(new THREE.DirectionalLight(0xffffff, 1).position.set(5,10,7));
+    
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    camera.position.set(0, 50, 200);
+    controls.update();
+    
+    function animate(){ requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); }
+    animate();
+    
+    window.addEventListener('resize', resizeViewer);
+}
+init3D();
 
-            controls=new THREE.OrbitControls(camera,renderer.domElement);
-            controls.enableDamping=true;
-            camera.position.set(0,0,150);
+function resizeViewer() {
+    const isCartOpen = $('#cart-panel').classList.contains('active');
+    const availableWidth = isCartOpen ? window.innerWidth - 340 : window.innerWidth;
+    
+    camera.aspect = availableWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(availableWidth, window.innerHeight);
+}
 
-            function animate(){requestAnimationFrame(animate);controls.update();renderer.render(scene,camera);}
-            animate();
+// ==================== CARGAR MODELO ====================
+$('#initial-upload-btn').onclick = () => $('#input-initial').click();
+$('#upload-btn').onclick = () => $('#input-viewer').click();
 
-            window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
+function loadModel(file) {
+    if (!file || !/\.stl$/i.test(file.name)) return alert("Solo archivos .STL");
+
+    fileName = file.name;
+    $('#loading-msg').classList.add('active');
+    $('#main-app').classList.add('active');
+    $('#initial-screen').style.display = 'none';
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const loader = new THREE.STLLoader();
+            const geometry = loader.parse(e.target.result);
+            const mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color: 0xeeeeee, shininess: 80}));
+
+            if (model) scene.remove(model);
+            scene.add(mesh);
+            model = mesh;
+
+            const box = new THREE.Box3().setFromObject(mesh);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z);
+
+            mesh.scale.setScalar(80 / maxDim);
+            mesh.position.set(0,0,0);
+
+            volume = (size.x * size.y * size.z) / 1000;
+            currentDims = {x: size.x.toFixed(1), y: size.y.toFixed(1), z: size.z.toFixed(1)};
+            currentVol = volume.toFixed(2);
+            currentWeight = (volume * mat.density / 1000).toFixed(3);
+
+            $('#file-name-info').textContent = fileName;
+            $('#dim-x').textContent = currentDims.x + ' mm';
+            $('#dim-y').textContent = currentDims.y + ' mm';
+            $('#dim-z').textContent = currentDims.z + ' mm';
+            $('#volume-info').textContent = currentVol + ' cm³';
+            $('#file-info-panel').classList.add('visible');
+            $('#add-current-btn').classList.add('visible');
+
+            $('#loading-msg').classList.remove('active');
+            renderMaterials();
+            calc();
+            resizeViewer();
+        } catch(err) {
+            console.error(err);
+            $('#loading-msg').classList.remove('active');
+            alert("Error al procesar el archivo STL");
         }
-        init3D();
+    };
+    reader.readAsArrayBuffer(file);
+}
 
-        // SUBIR ARCHIVO 100% FUNCIONAL
-        $('#initial-upload-btn').addEventListener('click', () => $('#input-initial').click());
-        $('#upload-btn').addEventListener('click', () => $('#input-viewer').click());
+$('#input-initial').onchange = e => e.target.files[0] && loadModel(e.target.files[0]);
+$('#input-viewer').onchange = e => e.target.files[0] && loadModel(e.target.files[0]);
 
-        function loadModel(file){
-            if(!file||!/\.stl$/i.test(file.name)) return;
-            fileName=file.name;
-            $('#loading-msg').classList.add('active');
-            $('#main-app').classList.add('active');
-            $('#initial-screen').style.display='none';
+// ==================== MATERIALES ====================
+function renderMaterials(){
+    const tech = $('#tech-select').value;
+    const cont = $('#material-container');
+    cont.innerHTML = '';
 
-            const reader=new FileReader();
-            reader.onload=e=>{
-                try{
-                    const loader=new THREE.STLLoader();
-                    const geom=loader.parse(e.target.result);
-                    const mesh=new THREE.Mesh(geom,new THREE.MeshPhongMaterial({color:0xaaaaaa,shininess:100}));
-                    if(model) scene.remove(model);
-                    if(boundingBoxHelper){scene.remove(boundingBoxHelper);boundingBoxHelper=null;}
-                    dimensionLabels.forEach(l=>scene.remove(l)); dimensionLabels=[];
-                    scene.add(mesh); model=mesh;
+    MATERIALS[tech].forEach((m, i) => {
+        const b = document.createElement('button');
+        b.className = 'material-btn';
+        if (i === 0) b.classList.add('selected');
+        b.textContent = m.name;
+        b.onclick = () => {
+            cont.querySelectorAll('.material-btn').forEach(x => x.classList.remove('selected'));
+            b.classList.add('selected');
+            mat = m;
+            calc();
+        };
+        cont.appendChild(b);
+    });
+    mat = MATERIALS[tech][0];
+    calc();
+}
 
-                    const box=new THREE.Box3().setFromObject(mesh);
-                    const size=box.getSize(new THREE.Vector3());
-                    const max=Math.max(size.x,size.y,size.z);
-                    mesh.scale.multiplyScalar(90/max);
-                    centerModel();
+$('#tech-select').onchange = renderMaterials;
 
-                    volume = (size.x * size.y * size.z) / 1000;
+// ==================== CÁLCULO CON MONEDA ====================
+function calc(){
+    if (volume <= 0) {
+        $('#weight').textContent = "0.000 kg";
+        $('#piece-cost').textContent = "$0.00";
+        return;
+    }
 
-                    $('#file-name-info').textContent=fileName;
-                    $('#dim-x').textContent=size.x.toFixed(1)+' mm';
-                    $('#dim-y').textContent=size.y.toFixed(1)+' mm';
-                    $('#dim-z').textContent=size.z.toFixed(1)+' mm';
-                    $('#volume-info').textContent=volume.toFixed(2)+' cm³';
+    const qty = parseInt($('#quantity').value) || 1;
+    const post = parseFloat($('.post-btn.selected')?.dataset.cost || 0);
+    const weightKg = (volume * mat.density) / 1000;
+    let costUSD = (weightKg * mat.price * 1000 + post) * qty;
 
-                    $('#file-info-panel').classList.add('visible');
-                    $('#add-current-btn').classList.add('visible');
-                    $('#loading-msg').classList.remove('active');
-                    renderMaterials();
-                    calc();
-                }catch(err){
-                    $('#loading-msg').classList.remove('active');
-                    alert("Error al cargar STL");
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
+    const currency = $('#currency').value;
+    let finalCost = costUSD;
+    let symbol = '$';
 
-        $('#input-initial').addEventListener('change', e=>e.target.files[0]&&loadModel(e.target.files[0]));
-        $('#input-viewer').addEventListener('change', e=>e.target.files[0]&&loadModel(e.target.files[0]));
+    if (currency === 'mxn') {
+        finalCost = costUSD * EXCHANGE_RATE;
+        symbol = 'MX$';
+    }
 
-        function centerModel(){
-            if(!model) return;
-            const box=new THREE.Box3().setFromObject(model);
-            const center=box.getCenter(new THREE.Vector3());
-            model.position.sub(center);
-            const size=box.getSize(new THREE.Vector3());
-            const max=Math.max(size.x,size.y,size.z);
-            camera.position.set(0,max*0.6,max*3);
-            controls.target.set(0,0,0);
-            controls.update();
-        }
+    $('#weight').textContent = (weightKg * qty).toFixed(3) + ' kg';
+    $('#piece-cost').textContent = symbol + finalCost.toFixed(2);
+}
 
-        function toggleXray(){
-            if(!model) return;
-            if(isXray){
-                model.material = originalMaterial;
-                $('#xray-btn').classList.remove('active');
-                $('#xray-btn').textContent = "Rayos X";
-                isXray = false;
-            }else{
-                originalMaterial = model.material;
-                model.material = new THREE.MeshBasicMaterial({color:0xaaaaaa,wireframe:true,transparent:true,opacity:0.6});
-                $('#xray-btn').classList.add('active');
-                $('#xray-btn').textContent = "Normal";
-                isXray = true;
-            }
-        }
+$('#quantity').oninput = calc;
+$('#currency').onchange = () => {
+    calc();
+    updateCart();
+};
 
-        function toggleAnalysis(){
-            if(!model) return;
-            if(boundingBoxHelper){
-                scene.remove(boundingBoxHelper);
-                dimensionLabels.forEach(l=>scene.remove(l));
-                dimensionLabels=[];
-                boundingBoxHelper=null;
-                $('#analysis-btn').classList.remove('active');
-                $('#analysis-btn').textContent="Análisis";
-            }else{
-                const box = new THREE.Box3().setFromObject(model);
-                boundingBoxHelper = new THREE.BoxHelper(model, 0xffff00);
-                boundingBoxHelper.material.linewidth = 3;
-                scene.add(boundingBoxHelper);
+// ==================== AÑADIR AL CARRITO ====================
+$('#add-current-btn').onclick = () => {
+    if (!fileName || volume <= 0) return alert("Primero carga un archivo STL válido");
 
-                const size = box.getSize(new THREE.Vector3());
-                const makeLabel = (text) => {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 256; canvas.height = 64;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-                    ctx.fillRect(0,0,256,64);
-                    ctx.font = 'bold 40px Arial';
-                    ctx.fillStyle = '#ffff00';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(text, 128, 48);
-                    const texture = new THREE.CanvasTexture(canvas);
-                    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({map: texture}));
-                    sprite.scale.set(15, 4, 1);
-                    return sprite;
-                };
+    const qty = parseInt($('#quantity').value) || 1;
+    const selectedBtn = $('#material-container .material-btn.selected');
+    if (!selectedBtn) return alert("Selecciona un material");
 
-                const center = box.getCenter(new THREE.Vector3());
-                const labels = [
-                    {text:`${size.x.toFixed(1)} mm`, pos:new THREE.Vector3(center.x + size.x/2 + 5, center.y, center.z)},
-                    {text:`${size.y.toFixed(1)} mm`, pos:new THREE.Vector3(center.x, center.y + size.y/2 + 5, center.z)},
-                    {text:`${size.z.toFixed(1)} mm`, pos:new THREE.Vector3(center.x, center.y, center.z + size.z/2 + 5)}
-                ];
-                labels.forEach(l=>{
-                    const label = makeLabel(l.text);
-                    label.position.copy(l.pos);
-                    scene.add(label);
-                    dimensionLabels.push(label);
-                });
+    const techSelect = document.getElementById('tech-select');
+    const techName = techSelect.options[techSelect.selectedIndex].text.trim();
 
-                $('#analysis-btn').classList.add('active');
-                $('#analysis-btn').textContent="Quitar Análisis";
-            }
-        }
+    const materialName = selectedBtn.textContent.trim();
+    const postBtn = $('.post-btn.selected');
+    const postName = postBtn ? postBtn.textContent.trim() : "Ninguno";
 
-        // EVENTOS DE BOTONES CORREGIDOS
-        $('#analysis-btn').addEventListener('click', toggleAnalysis);
-        $('#xray-btn').addEventListener('click', toggleXray);
+    // Limpieza robusta del precio mostrado
+    let pieceCostText = $('#piece-cost').textContent || "0";
+    pieceCostText = pieceCostText.replace(/[^0-9.]/g, '');
+    const pieceCostUSD = parseFloat(pieceCostText) || 0;
 
-        function renderMaterials(){
-            const tech=$('#tech-select').value;
-            const cont=$('#material-container');
-            cont.innerHTML='';
-            MATERIALS[tech].forEach((m,i)=>{
-                const b=document.createElement('button');
-                b.className='material-btn'; if(i===0) b.classList.add('selected');
-                b.textContent=m.name;
-                b.onclick=()=>{cont.querySelectorAll('.material-btn').forEach(x=>x.classList.remove('selected'));b.classList.add('selected');mat=m;calc();};
-                cont.appendChild(b);
-            });
-            mat=MATERIALS[tech][0]; calc();
-        }
+    if (pieceCostUSD <= 0) {
+        alert("No se pudo obtener un precio válido");
+        console.warn("Precio crudo:", pieceCostText, "→ parseado:", pieceCostUSD);
+        return;
+    }
 
-        function calc(){
-            if(!volume) return;
-            const qty=parseInt($('#quantity').value)||1;
-            const post=parseFloat(document.querySelector('.post-btn.selected')?.dataset.cost||0);
-            const realWeightKg = (volume * mat.density) / 1000;
-            const pieceCost = (realWeightKg * mat.price * 1000 + post) * qty;
-            $('#weight').textContent=(realWeightKg * qty).toFixed(3)+' kg';
-            $('#piece-cost').textContent='$'+pieceCost.toFixed(2);
-        }
+    cart.push({
+        tecnologia: techName,
+        archivo: fileName,
+        material: materialName,
+        post: postName,
+        cantidad: qty,
+        precioUSD: pieceCostUSD,
+        dims: currentDims,
+        vol: currentVol,
+        weight: currentWeight
+    });
 
-        function updateCart(){
-            const items=$('#cart-items');
-            const badge=$('#cart-toggle .badge');
-            if(cart.length===0){
-                items.innerHTML="<p style='text-align:center;color:#888;padding:40px 0;font-size:13px'>Carrito vacío</p>";
-                $('#subtotal').textContent="$0.00";
-                $('#envio').textContent="$280";
-                $('#total-carrito').textContent="$280";
-            }else{
-                let subtotal=0;
-                items.innerHTML=cart.map((item,i)=>`
-                    <div class="cart-item">
-                        <div class="delete-item" onclick="removeFromCart(${i})">X</div>
-                        <strong>${item.cantidad} × ${item.archivo}</strong><br>
-                        ${item.material} • ${item.post}<br>
-                        <div class="cart-item-details">
-                            ${item.dims.x}×${item.dims.y}×${item.dims.z} mm • ${item.vol} cm³ • ${item.weight} kg
-                        </div>
-                        <div class="cart-item-controls">
-                            <button onclick="changeQty(${i},-1)">-</button>
-                            <span>${item.cantidad}</span>
-                            <button onclick="changeQty(${i},1)">+</button>
-                        </div>
-                        <strong style="color:#28a745">$${item.precio}</strong>
-                    </div>
-                `).join('');
-                subtotal=cart.reduce((s,item)=>s+item.precio,0);
-                $('#subtotal').textContent='$'+subtotal.toFixed(2);
-                $('#total-carrito').textContent='$'+(subtotal+280).toFixed(2);
-            }
-            badge.textContent=cart.reduce((s,i)=>s+i.cantidad,0);
-        }
+    updateCart();
+    alert(`¡Añadidas ${qty} pieza(s) al carrito!`);
+};
 
-        window.removeFromCart=i=>{cart.splice(i,1);localStorage.setItem('cart3d',JSON.stringify(cart));updateCart();}
-        window.changeQty=(i,delta)=>{cart[i].cantidad=Math.max(1,cart[i].cantidad+delta);cart[i].precio=cart[i].basePrice*cart[i].cantidad;localStorage.setItem('cart3d',JSON.stringify(cart));updateCart();};
+// ==================== ACTUALIZAR CARRITO ====================
+function updateCart() {
+    const items = $('#cart-items');
+    const badge = $('#cart-toggle .badge');
+    const currency = $('#currency').value;
+    const rate = currency === 'mxn' ? EXCHANGE_RATE : 1;
+    const symbol = currency === 'mxn' ? 'MX$' : '$';
 
-        $('#add-current-btn').addEventListener('click',()=>{
-            if(!fileName||!volume) return alert("Primero carga un archivo STL");
-            const qty=parseInt($('#quantity').value)||1;
-            const post=document.querySelector('.post-btn.selected').textContent;
-            const pieceCost=parseFloat($('#piece-cost').textContent.replace(/[^0-9.]/g,''));
-            cart.push({archivo:fileName,material:mat.name,post,cantidad:qty,precio:pieceCost,basePrice:pieceCost/qty,dims:currentDims,vol:currentVol,weight:currentWeight});
-            localStorage.setItem('cart3d',JSON.stringify(cart));
-            updateCart();
-            alert(`${qty} pieza(s) agregadas al carrito`);
-        });
+    if (cart.length === 0) {
+        items.innerHTML = "<p style='text-align:center;color:#888;padding:40px 0;font-size:13px'>Carrito vacío</p>";
+        $('#subtotal').textContent = symbol + "0.00";
+        $('#envio').textContent = symbol + "280.00";
+        $('#total-carrito').textContent = symbol + "280.00";
+        badge.textContent = "0";
+        return;
+    }
 
-        $('#checkout-btn').onclick=()=>{if(cart.length===0)return alert("Carrito vacío");window.location.href="https://tudominio.webflow.io/checkout";};
+    let subtotal = 0;
+    items.innerHTML = cart.map((item, i) => {
+        const price = item.precioUSD * rate;
+        const itemTotal = price * item.cantidad;
+        subtotal += itemTotal;
 
-        $('#cart-toggle').onclick=()=>$('#cart-panel').classList.toggle('active');
+        return `
+            <div class="cart-item">
+                <div class="delete-item" onclick="removeFromCart(${i})">X</div>
+                <strong>${item.cantidad} × ${item.archivo}</strong><br>
+                <small>Tecnología: ${item.tecnologia}</small><br>
+                ${item.material} • ${item.post}<br>
+                <div style="font-size:11px;color:#aaa">
+                    ${item.dims.x}×${item.dims.y}×${item.dims.z} mm • ${item.vol} cm³ • ${item.weight} kg
+                </div>
+                
+                <div class="qty-controls">
+                    <button onclick="changeQty(${i}, -1)">-</button>
+                    <span>${item.cantidad}</span>
+                    <button onclick="changeQty(${i}, 1)">+</button>
+                </div>
+                
+                <strong style="color:#28a745;float:right">${symbol}${itemTotal.toFixed(2)}</strong>
+            </div>
+        `;
+    }).join('');
 
-        $('#tech-select').onchange=renderMaterials;
-        $('#quantity').oninput=calc;
-        document.querySelectorAll('.post-btn').forEach(btn=>{
-            btn.onclick=()=>{document.querySelectorAll('.post-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');calc();}
-        });
+    $('#subtotal').textContent = symbol + subtotal.toFixed(2);
+    $('#total-carrito').textContent = symbol + (subtotal + 280 * rate).toFixed(2);
+    badge.textContent = cart.reduce((s, item) => s + item.cantidad, 0);
+}
 
-        updateCart();
-    </script>
+window.changeQty = function(index, delta) {
+    cart[index].cantidad = Math.max(1, cart[index].cantidad + delta);
+    updateCart();
+};
+
+window.removeFromCart = function(index) {
+    cart.splice(index, 1);
+    updateCart();
+};
+
+// ==================== TOGGLE CARRITO ====================
+$('#cart-toggle').onclick = () => {
+    const panel = $('#cart-panel');
+    panel.classList.toggle('active');
+    
+    if (panel.classList.contains('active')) {
+        viewerContainer.classList.add('shrinked');
+    } else {
+        viewerContainer.classList.remove('shrinked');
+    }
+    resizeViewer();
+};
+
+// ==================== RAYOS X Y ANÁLISIS ====================
+$('#xray-btn').onclick = () => {
+    if (!model) return alert("Carga un modelo primero");
+    if (!isXray) {
+        originalMaterial = model.material;
+        model.material = new THREE.MeshBasicMaterial({color: 0xaaaaaa, wireframe: true, transparent: true, opacity: 0.6});
+        $('#xray-btn').textContent = "Normal";
+        $('#xray-btn').classList.add('active');
+        isXray = true;
+    } else {
+        model.material = originalMaterial;
+        $('#xray-btn').textContent = "Rayos X";
+        $('#xray-btn').classList.remove('active');
+        isXray = false;
+    }
+};
+
+$('#analysis-btn').onclick = () => {
+    if (!model) return alert("Carga un modelo primero");
+    if (boundingBoxHelper) {
+        scene.remove(boundingBoxHelper);
+        boundingBoxHelper = null;
+        $('#analysis-btn').textContent = "Análisis";
+        $('#analysis-btn').classList.remove('active');
+    } else {
+        boundingBoxHelper = new THREE.BoxHelper(model, 0xffff00);
+        scene.add(boundingBoxHelper);
+        $('#analysis-btn').textContent = "Quitar Análisis";
+        $('#analysis-btn').classList.add('active');
+    }
+};
+
+// ==================== INICIO ====================
+renderMaterials();
+updateCart();
+resizeViewer();
+</script>
 </body>
 </html>
