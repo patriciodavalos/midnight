@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cotizador 3D México - Versión Estable</title>
+    <title>Cotizador 3D México - FDM/SLA -10% extra</title>
     <link rel="icon" href="data:,">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -62,10 +62,7 @@
         #cart-toggle{position:fixed;top:18px;right:18px;background:#28a745;color:white;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;z-index:9999;cursor:pointer;box-shadow:0 10px 30px rgba(40,167,69,.7)}
         #cart-toggle .badge{position:absolute;top:-8px;right:-8px;background:#dc3545;color:white;width:28px;height:28px;border-radius:50%;font-size:13px;font-weight:bold;display:flex;align-items:center;justify-content:center}
        
-        #checkout-btn{
-            background:#28a745;color:white;padding:16px;border:none;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;width:100%;margin-top:20px;
-            box-shadow:0 8px 25px rgba(40,167,69,.7);transition:all .3s;
-        }
+        #checkout-btn{background:#28a745;color:white;padding:16px;border:none;border-radius:50px;font-size:18px;font-weight:bold;cursor:pointer;width:100%;margin-top:20px;box-shadow:0 8px 25px rgba(40,167,69,.7);transition:all .3s}
         #checkout-btn:hover{background:#218838;transform:scale(1.03)}
        
         input[type="file"]{display:none}
@@ -161,26 +158,53 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/loaders/STLLoader.min.js"></script>
 
 <script>
 // ==================== CONFIGURACIÓN ====================
 const MARGEN = 1.38;
-const EXCHANGE_RATE = 20;   // 1 USD = 20 MXN
+const EXCHANGE_RATE = 20;
+const GANANCIA = 1.35;
 
+// Tecnologías locales (sin margen de aduana)
+const TECHS_SIN_MARGEN = ['fdm', 'sla'];
+
+// Precios actualizados: FDM y SLA con -10% extra respecto a la versión anterior
 const MATERIALS = {
-    fdm: [{name:"PLA",price:0.394*MARGEN,density:1.24},{name:"ABS",price:0.498*MARGEN,density:1.04},{name:"ASA",price:0.595*MARGEN,density:1.07},{name:"PETG",price:0.55*MARGEN,density:1.27},{name:"TPU",price:0.78*MARGEN,density:1.21},{name:"PA12-CF",price:1.45*MARGEN,density:1.10}],
-    sla: [{name:"Estándar",price:0.196*MARGEN,density:1.15},{name:"Negra",price:0.368*MARGEN,density:1.18},{name:"Gris",price:0.400*MARGEN,density:1.18},{name:"Transparente",price:0.45*MARGEN,density:1.16},{name:"Flexible",price:0.68*MARGEN,density:1.10},{name:"Alta Temp",price:0.85*MARGEN,density:1.17}],
-    mjf: [{name:"PA12 Negro",price:1.25*MARGEN,density:1.01},{name:"PA12 Gris",price:1.18*MARGEN,density:1.01},{name:"PAC-HP",price:5.50*MARGEN,density:1.02}],
-    sls: [{name:"PA12",price:0.95*MARGEN,density:1.00},{name:"PA12 Pro",price:1.15*MARGEN,density:1.00},{name:"TPU",price:1.40*MARGEN,density:1.00}],
-    slm: [
-        {name:"Acero Inox 316L",     price:0.090*MARGEN,density:7.98},
-        {name:"AlSi10Mg (Aluminio)", price:0.100*MARGEN,density:2.67},
-        {name:"Ti-6Al-4V (Titanio)", price:0.450*MARGEN,density:4.43}
+    fdm: [
+        {name:"PLA",     price:0.094 * 0.5 * GANANCIA * 0.9, density:1.24},
+        {name:"ABS",     price:0.130 * 0.5 * GANANCIA * 0.9, density:1.04},
+        {name:"ASA",     price:0.135 * 0.5 * GANANCIA * 0.9, density:1.07},
+        {name:"PETG",    price:0.055  * 0.5 * GANANCIA * 0.9, density:1.27},
+        {name:"TPU",     price:0.080  * 0.5 * GANANCIA * 0.9, density:1.21},
+        {name:"PA12-CF", price:0.055  * 0.5 * GANANCIA * 0.9, density:1.10}
     ],
-    wjp: [{name:"Full Color",price:4.80*MARGEN,density:1.20}],
-    bj: [{name:"316L BJ",price:9.80*MARGEN,density:7.98}]
+    sla: [
+        {name:"Estándar",    price:0.196 * 0.5 * GANANCIA * 0.9, density:1.15},
+        {name:"Negra",       price:0.468 * 0.5 * GANANCIA * 0.9, density:1.18},
+        {name:"Gris",        price:0.300 * 0.5 * GANANCIA * 0.9, density:1.18},
+        {name:"Transparente",price:0.45  * 0.5 * GANANCIA * 0.9, density:1.16},
+        {name:"Flexible",    price:0.68  * 0.5 * GANANCIA * 0.9, density:1.10},
+        {name:"Alta Temp",   price:0.65  * 0.5 * GANANCIA * 0.9, density:1.17}
+    ],
+    mjf: [
+        {name:"PA12 Negro", price:(1.25 * MARGEN) * 0.5 * GANANCIA, density:1.01},
+        {name:"PA12 Gris",  price:(1.18 * MARGEN) * 0.5 * GANANCIA, density:1.01},
+        {name:"PAC-HP",     price:(5.50 * MARGEN) * 0.5 * GANANCIA, density:1.02}
+    ],
+    sls: [
+        {name:"PA12",     price:(0.85 * MARGEN) * 0.5 * GANANCIA, density:1.00},
+        {name:"PA12 Pro", price:(0.95 * MARGEN) * 0.5 * GANANCIA, density:1.00},
+        {name:"TPU",      price:(0.90 * MARGEN) * 0.5 * GANANCIA, density:1.00}
+    ],
+    slm: [
+        {name:"Acero Inox 316L",     price:(0.090 * MARGEN) * 0.5 * GANANCIA, density:7.98},
+        {name:"AlSi10Mg (Aluminio)", price:(0.110 * MARGEN) * 0.5 * GANANCIA, density:2.67},
+        {name:"Ti-6Al-4V (Titanio)", price:(0.450 * MARGEN) * 0.5 * GANANCIA, density:4.43}
+    ],
+    wjp: [{name:"Full Color", price:(4.80 * MARGEN) * 0.5 * GANANCIA, density:1.20}],
+    bj:  [{name:"316L BJ",    price:(6.80 * MARGEN) * 0.5 * GANANCIA, density:7.98}]
 };
 
 let scene, camera, renderer, controls, model, volume = 0, fileName = "", mat = MATERIALS.fdm[0];
@@ -189,7 +213,6 @@ let currentDims = {x:"0.0",y:"0.0",z:"0.0"}, currentVol = "0.00", currentWeight 
 let currentCurrency = "mxn";
 
 const $ = s => document.querySelector(s);
-const viewerContainer = $('#viewer-container');
 
 // ==================== VISOR 3D ====================
 function init3D(){
@@ -197,7 +220,7 @@ function init3D(){
     camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer({antialias:true});
     renderer.setSize(window.innerWidth, window.innerHeight);
-    viewerContainer.appendChild(renderer.domElement);
+    document.getElementById('viewer-container').appendChild(renderer.domElement);
     
     scene.add(new THREE.AmbientLight(0xffffff, 0.8));
     scene.add(new THREE.DirectionalLight(0xffffff, 1).position.set(5,10,7));
@@ -215,7 +238,7 @@ function init3D(){
 init3D();
 
 function resizeViewer() {
-    const isCartOpen = $('#cart-panel').classList.contains('active');
+    const isCartOpen = document.querySelector('#cart-panel')?.classList.contains('active');
     const availableWidth = isCartOpen ? window.innerWidth - 340 : window.innerWidth;
     
     camera.aspect = availableWidth / window.innerHeight;
@@ -224,16 +247,16 @@ function resizeViewer() {
 }
 
 // ==================== CARGAR MODELO ====================
-$('#initial-upload-btn').onclick = () => $('#input-initial').click();
-$('#upload-btn').onclick = () => $('#input-viewer').click();
+document.getElementById('initial-upload-btn').onclick = () => document.getElementById('input-initial').click();
+document.getElementById('upload-btn').onclick = () => document.getElementById('input-viewer').click();
 
 function loadModel(file) {
     if (!file || !/\.stl$/i.test(file.name)) return alert("Solo archivos .STL");
 
     fileName = file.name;
-    $('#loading-msg').classList.add('active');
-    $('#main-app').classList.add('active');
-    $('#initial-screen').style.display = 'none';
+    document.getElementById('loading-msg').classList.add('active');
+    document.getElementById('main-app').classList.add('active');
+    document.getElementById('initial-screen').style.display = 'none';
 
     const reader = new FileReader();
     reader.onload = e => {
@@ -258,37 +281,37 @@ function loadModel(file) {
             currentVol = volume.toFixed(2);
             currentWeight = (volume * mat.density / 1000).toFixed(3);
 
-            $('#file-name-info').textContent = fileName;
-            $('#dim-x').textContent = currentDims.x + ' mm';
-            $('#dim-y').textContent = currentDims.y + ' mm';
-            $('#dim-z').textContent = currentDims.z + ' mm';
-            $('#volume-info').textContent = currentVol + ' cm³';
-            $('#file-info-panel').classList.add('visible');
-            $('#add-current-btn').classList.add('visible');
+            document.getElementById('file-name-info').textContent = fileName;
+            document.getElementById('dim-x').textContent = currentDims.x + ' mm';
+            document.getElementById('dim-y').textContent = currentDims.y + ' mm';
+            document.getElementById('dim-z').textContent = currentDims.z + ' mm';
+            document.getElementById('volume-info').textContent = currentVol + ' cm³';
+            document.getElementById('file-info-panel').classList.add('visible');
+            document.getElementById('add-current-btn').classList.add('visible');
 
-            $('#loading-msg').classList.remove('active');
+            document.getElementById('loading-msg').classList.remove('active');
             renderMaterials();
             calc();
             resizeViewer();
         } catch(err) {
             console.error(err);
-            $('#loading-msg').classList.remove('active');
+            document.getElementById('loading-msg').classList.remove('active');
             alert("Error al procesar el archivo STL");
         }
     };
     reader.readAsArrayBuffer(file);
 }
 
-$('#input-initial').onchange = e => e.target.files[0] && loadModel(e.target.files[0]);
-$('#input-viewer').onchange = e => e.target.files[0] && loadModel(e.target.files[0]);
+document.getElementById('input-initial').onchange = e => e.target.files[0] && loadModel(e.target.files[0]);
+document.getElementById('input-viewer').onchange = e => e.target.files[0] && loadModel(e.target.files[0]);
 
 // ==================== MATERIALES ====================
 function renderMaterials(){
-    const tech = $('#tech-select').value;
-    const cont = $('#material-container');
+    const tech = document.getElementById('tech-select').value;
+    const cont = document.getElementById('material-container');
     cont.innerHTML = '';
 
-    MATERIALS[tech].forEach((m, i) => {
+    (MATERIALS[tech] || []).forEach((m, i) => {
         const b = document.createElement('button');
         b.className = 'material-btn';
         if (i === 0) b.classList.add('selected');
@@ -301,26 +324,33 @@ function renderMaterials(){
         };
         cont.appendChild(b);
     });
-    mat = MATERIALS[tech][0];
-    calc();
+    if (MATERIALS[tech] && MATERIALS[tech].length > 0) {
+        mat = MATERIALS[tech][0];
+        calc();
+    }
 }
 
-$('#tech-select').onchange = renderMaterials;
+document.getElementById('tech-select').onchange = renderMaterials;
 
-// ==================== CÁLCULO CON MONEDA ====================
+// ==================== CÁLCULO ====================
 function calc(){
     if (volume <= 0) {
-        $('#weight').textContent = "0.000 kg";
-        $('#piece-cost').textContent = "$0.00";
+        document.getElementById('weight').textContent = "0.000 kg";
+        document.getElementById('piece-cost').textContent = "$0.00";
         return;
     }
 
-    const qty = parseInt($('#quantity').value) || 1;
-    const post = parseFloat($('.post-btn.selected')?.dataset.cost || 0);
+    const qty = parseInt(document.getElementById('quantity').value) || 1;
+    const post = parseFloat(document.querySelector('.post-btn.selected')?.dataset.cost || 0);
     const weightKg = (volume * mat.density) / 1000;
-    let costUSD = (weightKg * mat.price * 1000 + post) * qty;
 
-    const currency = $('#currency').value;
+    const tech = document.getElementById('tech-select').value;
+    const aplicarMargen = !TECHS_SIN_MARGEN.includes(tech);
+    const precioUnitario = mat.price * (aplicarMargen ? MARGEN : 1);
+
+    let costUSD = (weightKg * precioUnitario * 1000 + post) * qty;
+
+    const currency = document.getElementById('currency').value;
     let finalCost = costUSD;
     let symbol = '$';
 
@@ -329,39 +359,37 @@ function calc(){
         symbol = 'MX$';
     }
 
-    $('#weight').textContent = (weightKg * qty).toFixed(3) + ' kg';
-    $('#piece-cost').textContent = symbol + finalCost.toFixed(2);
+    document.getElementById('weight').textContent = (weightKg * qty).toFixed(3) + ' kg';
+    document.getElementById('piece-cost').textContent = symbol + finalCost.toFixed(2);
 }
 
-$('#quantity').oninput = calc;
-$('#currency').onchange = () => {
+document.getElementById('quantity').oninput = calc;
+document.getElementById('currency').onchange = () => {
     calc();
     updateCart();
 };
 
 // ==================== AÑADIR AL CARRITO ====================
-$('#add-current-btn').onclick = () => {
+document.getElementById('add-current-btn').onclick = () => {
     if (!fileName || volume <= 0) return alert("Primero carga un archivo STL válido");
 
-    const qty = parseInt($('#quantity').value) || 1;
-    const selectedBtn = $('#material-container .material-btn.selected');
+    const qty = parseInt(document.getElementById('quantity').value) || 1;
+    const selectedBtn = document.querySelector('#material-container .material-btn.selected');
     if (!selectedBtn) return alert("Selecciona un material");
 
     const techSelect = document.getElementById('tech-select');
     const techName = techSelect.options[techSelect.selectedIndex].text.trim();
 
     const materialName = selectedBtn.textContent.trim();
-    const postBtn = $('.post-btn.selected');
+    const postBtn = document.querySelector('.post-btn.selected');
     const postName = postBtn ? postBtn.textContent.trim() : "Ninguno";
 
-    // Limpieza robusta del precio mostrado
-    let pieceCostText = $('#piece-cost').textContent || "0";
+    let pieceCostText = document.getElementById('piece-cost').textContent || "0";
     pieceCostText = pieceCostText.replace(/[^0-9.]/g, '');
     const pieceCostUSD = parseFloat(pieceCostText) || 0;
 
     if (pieceCostUSD <= 0) {
         alert("No se pudo obtener un precio válido");
-        console.warn("Precio crudo:", pieceCostText, "→ parseado:", pieceCostUSD);
         return;
     }
 
@@ -383,17 +411,17 @@ $('#add-current-btn').onclick = () => {
 
 // ==================== ACTUALIZAR CARRITO ====================
 function updateCart() {
-    const items = $('#cart-items');
-    const badge = $('#cart-toggle .badge');
-    const currency = $('#currency').value;
+    const items = document.getElementById('cart-items');
+    const badge = document.querySelector('#cart-toggle .badge');
+    const currency = document.getElementById('currency').value;
     const rate = currency === 'mxn' ? EXCHANGE_RATE : 1;
     const symbol = currency === 'mxn' ? 'MX$' : '$';
 
     if (cart.length === 0) {
         items.innerHTML = "<p style='text-align:center;color:#888;padding:40px 0;font-size:13px'>Carrito vacío</p>";
-        $('#subtotal').textContent = symbol + "0.00";
-        $('#envio').textContent = symbol + "280.00";
-        $('#total-carrito').textContent = symbol + "280.00";
+        document.getElementById('subtotal').textContent = symbol + "0.00";
+        document.getElementById('envio').textContent = symbol + "280.00";
+        document.getElementById('total-carrito').textContent = symbol + "280.00";
         badge.textContent = "0";
         return;
     }
@@ -425,8 +453,8 @@ function updateCart() {
         `;
     }).join('');
 
-    $('#subtotal').textContent = symbol + subtotal.toFixed(2);
-    $('#total-carrito').textContent = symbol + (subtotal + 280 * rate).toFixed(2);
+    document.getElementById('subtotal').textContent = symbol + subtotal.toFixed(2);
+    document.getElementById('total-carrito').textContent = symbol + (subtotal + 280 * rate).toFixed(2);
     badge.textContent = cart.reduce((s, item) => s + item.cantidad, 0);
 }
 
@@ -441,48 +469,16 @@ window.removeFromCart = function(index) {
 };
 
 // ==================== TOGGLE CARRITO ====================
-$('#cart-toggle').onclick = () => {
-    const panel = $('#cart-panel');
+document.getElementById('cart-toggle').onclick = () => {
+    const panel = document.getElementById('cart-panel');
     panel.classList.toggle('active');
     
     if (panel.classList.contains('active')) {
-        viewerContainer.classList.add('shrinked');
+        document.getElementById('viewer-container').classList.add('shrinked');
     } else {
-        viewerContainer.classList.remove('shrinked');
+        document.getElementById('viewer-container').classList.remove('shrinked');
     }
     resizeViewer();
-};
-
-// ==================== RAYOS X Y ANÁLISIS ====================
-$('#xray-btn').onclick = () => {
-    if (!model) return alert("Carga un modelo primero");
-    if (!isXray) {
-        originalMaterial = model.material;
-        model.material = new THREE.MeshBasicMaterial({color: 0xaaaaaa, wireframe: true, transparent: true, opacity: 0.6});
-        $('#xray-btn').textContent = "Normal";
-        $('#xray-btn').classList.add('active');
-        isXray = true;
-    } else {
-        model.material = originalMaterial;
-        $('#xray-btn').textContent = "Rayos X";
-        $('#xray-btn').classList.remove('active');
-        isXray = false;
-    }
-};
-
-$('#analysis-btn').onclick = () => {
-    if (!model) return alert("Carga un modelo primero");
-    if (boundingBoxHelper) {
-        scene.remove(boundingBoxHelper);
-        boundingBoxHelper = null;
-        $('#analysis-btn').textContent = "Análisis";
-        $('#analysis-btn').classList.remove('active');
-    } else {
-        boundingBoxHelper = new THREE.BoxHelper(model, 0xffff00);
-        scene.add(boundingBoxHelper);
-        $('#analysis-btn').textContent = "Quitar Análisis";
-        $('#analysis-btn').classList.add('active');
-    }
 };
 
 // ==================== INICIO ====================
